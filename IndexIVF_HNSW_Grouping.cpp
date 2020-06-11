@@ -2,6 +2,25 @@
 
 namespace ivfhnsw
 {
+    static FILE *fp_centriod = NULL;
+    static const char *log_centriod = "centriod.log";
+
+    int centriodTraceSetup()
+    {
+        fp_centriod = fopen(log_centriod, "w");
+        if (fp_centriod == NULL)
+            return -1;
+
+        return 0;
+    }
+
+    void centriodTraceClose()
+    {
+        if (fp_centriod != NULL)
+            fclose(fp_centriod);
+    }
+
+
     //================================================
     // IVF_HNSW + grouping( + pruning) implementation
     //================================================
@@ -30,6 +49,13 @@ namespace ivfhnsw
         while (nn_centroids_raw.size() > 1) {
             centroid_vector_norms_L2sqr[nn_centroids_raw.size() - 2] = nn_centroids_raw.top().first;
             nn_centroid_idxs[centroid_idx][nn_centroids_raw.size() - 2] = nn_centroids_raw.top().second;
+
+            if (fp_centriod) {
+                // if centriod info trace enabled, log it
+                fprintf(fp_centriod, "centroid index:\t%u\tsub centroid distance:\t%f\n",
+                        centroid_idx, centroid_vector_norms_L2sqr[nn_centroids_raw.size() - 2]);
+            }
+
             nn_centroids_raw.pop();
         }
         if (group_size == 0)

@@ -4,6 +4,11 @@
 #include "IndexIVF_HNSW.h"
 
 namespace ivfhnsw{
+    // util function for centriod trace
+    extern int centriodTraceSetup();
+    extern void centriodTraceClose();
+
+
     //=======================================
     // IVF_HNSW + Grouping( + Pruning) index
     //=======================================

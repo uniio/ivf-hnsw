@@ -59,12 +59,4 @@ if [ x"$1" = x"reset" ]; then
     rm -f ${PWD}/models/DEEP1B/*
 fi
 
-# following is not related with run program, it's used for build program which will use ivf-hnsw
-# as if ldconfig not use symbol link, must copy files
-sudo cp -f ${PWD}/lib/libfaiss.a /usr/local/lib/libfaiss.a
-sudo cp -f ${PWD}/lib/libhnswlib.a /usr/local/lib/libhnswlib.a
-sudo cp -f ${PWD}/lib/libivf-hnsw.a /usr/local/lib/libivf-hnsw.a
-
-sudo ldconfig
-
 echo "success setup test environment"

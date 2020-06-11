@@ -23,7 +23,7 @@ The code requires a C++ compiler that understands:
 #### Installation instructions
 1) Clone repository
 
-```git clone https://github.com/dbaranchuk/ivf-hnsw --recursive```
+```git clone https://github.com/orcadt/ivf-hnsw.git --recursive```
 
 2) Configure FAISS
 

@@ -1,5 +1,21 @@
 #!/bin/bash
 
+# when the following lib files are ready, we think build ivf-hnsw done
+if [ ! -f ${PWD}/lib/libfaiss.a ]; then
+    echo ivf-hnsw not build yet, build it first
+    exit 1
+fi
+
+if [ ! -f ${PWD}/lib/libhnswlib.a ]; then
+    echo ivf-hnsw not build yet, build it first
+    exit 1
+fi
+
+if [ ! -f ${PWD}/lib/libivf-hnsw.a ]; then
+    echo ivf-hnsw not build yet, build it first
+    exit 1
+fi
+
 data_nfs_src=$(cat /etc/fstab|grep nfs_shared|awk '{print $1}')
 nfs_path_mnt="/mnt/nfs_shared"
 
@@ -42,5 +58,13 @@ if [ x"$1" = x"reset" ]; then
     rm -f ${PWD}/models/SIFT1B/*
     rm -f ${PWD}/models/DEEP1B/*
 fi
+
+# following is not related with run program, it's used for build program which will use ivf-hnsw
+# as if ldconfig not use symbol link, must copy files
+sudo cp -f ${PWD}/lib/libfaiss.a /usr/local/lib/libfaiss.a
+sudo cp -f ${PWD}/lib/libhnswlib.a /usr/local/lib/libhnswlib.a
+sudo cp -f ${PWD}/lib/libivf-hnsw.a /usr/local/lib/libivf-hnsw.a
+
+sudo ldconfig
 
 echo "success setup test environment"

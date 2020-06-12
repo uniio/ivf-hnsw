@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$(expr substr $(uname -s) 1 5)" != "Linux" ]; then
+    echo "Script can only run in Linux"
+    exit 1
+fi
+
 # when the following lib files are ready, we think build ivf-hnsw done
 if [ ! -f ${PWD}/lib/libfaiss.a ]; then
     echo ivf-hnsw not build yet, build it first

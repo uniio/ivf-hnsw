@@ -38,6 +38,8 @@ namespace ivfhnsw {
     void IndexIVF_HNSW::build_quantizer(const char *path_data, const char *path_info,
                                         const char *path_edges, size_t M, size_t efConstruction)
     {
+        hdr_idx.efConstruction = efConstruction;
+
         if (exists(path_info) && exists(path_edges)) {
             quantizer = new hnswlib::HierarchicalNSW(path_info, path_data, path_edges);
             quantizer->efSearch = efConstruction;
@@ -273,6 +275,44 @@ namespace ivfhnsw {
         norm_pq->train(n, norms.data());
     }
 
+    int IndexIVF_HNSW::copy_file(const char *file_src, const char *file_dst)
+    {
+        int rc = -1;
+        char    buf[4096];
+        FILE    *fp_r = fopen(file_src, "r");
+        FILE    *fp_w = fopen(file_dst, "w");
+
+        if (fp_r == NULL) {
+            std::cout << "Failed to open file: " << file_src << std::endl;
+            goto out;
+        }
+        if (fp_w == NULL) {
+            std::cout << "Failed to open file: " << file_dst << std::endl;
+            goto out;
+        }
+
+        while (!feof(fp_r)) {
+            size_t bytes = fread(buf, 1, sizeof(buf), fp_r);
+            if (ferror(fp_r)) {
+                std::cout << "Failed to read file: " << file_src << std::endl;
+                goto out;
+            }
+            if (bytes) {
+                if (bytes != fwrite(buf, 1, bytes, fp_w)) {
+                    std::cout << "Failed to write file: " << file_dst << std::endl;
+                    goto out;
+                }
+            }
+        }
+        rc = 0;
+
+out:
+        if (fp_r) fclose(fp_r);
+        if (fp_w) fclose(fp_w);
+
+        return rc;
+    }
+
     // Write index 
     void IndexIVF_HNSW::write(const char *path_index)
     {
@@ -295,6 +335,92 @@ namespace ivfhnsw {
 
         // Save centroid norms
         write_vector(output, centroid_norms);
+    }
+
+    // Write index
+    void IndexIVF_HNSW::write2(const char *home_dir, size_t n_vecs, bool do_opq,
+            const char *path_edge)
+    {
+        char path_f[512];
+
+        // write header file
+        {
+            sprintf(path_f, "%s/hdr.vec", home_dir);
+            std::cout << "write file: " << path_f << std::endl;
+            std::ofstream output(path_f, std::ios::binary);
+
+            /*
+             * hdr_idx.efConstruction already set by build_quantizer function
+             *
+             */
+            hdr_idx.n = n_vecs;
+            hdr_idx.nc = this->nc;
+            hdr_idx.code_size = this->code_size;
+            hdr_idx.code_bytes = (this->code_size)/8;
+            hdr_idx.d = this->d;
+            hdr_idx.do_opq = do_opq ? 1 : 0;
+            hdr_idx.M = this->M;
+
+            // TODO: set value properly, instead of use default one
+            hdr_idx.dmatch = this->dmatch;
+            hdr_idx.dnear = this->dnear;
+
+            write_variable(output, hdr_idx);
+            output.close();
+        }
+
+        // centriods file create by k-means tool, not here
+
+        // Save Norm centriods
+        {
+            sprintf(path_f, "%s/cnorms.vec", home_dir);
+            std::cout << "write file: " << path_f << std::endl;
+            std::ofstream output(path_f, std::ios::binary);
+            write_vector(output, centroid_norms);
+            output.close();
+        }
+
+        // Save PQ codes
+        {
+            sprintf(path_f, "%s/pq.vec", home_dir);
+            std::ofstream output(path_f, std::ios::binary);
+            for (size_t i = 0; i < nc; i++)
+                write_vector(output, codes[i]);
+            output.close();
+        }
+
+        // Save OPQ codes
+        // TODO: confirm it
+        {
+            if (do_opq) {
+                std::vector<float> copy_centroid(d);
+                for (size_t i = 0; i < nc; i++){
+                    float *centroid = quantizer->getDataByInternalId(i);
+                    memcpy(copy_centroid.data(), centroid, d * sizeof(float));
+                    opq_matrix->apply_noalloc(1, copy_centroid.data(), centroid);
+                }
+
+                sprintf(path_f, "%s/opq.vec", home_dir);
+                std::ofstream output(path_f, std::ios::binary);
+                write_vector(output, copy_centroid);
+                output.close();
+            }
+        }
+
+        // Save norm PQ codes
+        {
+            sprintf(path_f, "%s/normpq.vec", home_dir);
+            std::ofstream output(path_f, std::ios::binary);
+            for (size_t i = 0; i < nc; i++)
+                write_vector(output, norm_codes[i]);
+            output.close();
+        }
+
+        // create edge file
+        {
+            sprintf(path_f, "%s/edge.vec", home_dir);
+            copy_file(path_edge, path_f);
+        }
     }
 
     // Read index 

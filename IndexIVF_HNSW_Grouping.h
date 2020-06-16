@@ -44,6 +44,9 @@ namespace ivfhnsw{
         /// Compute distances between the group centroid and its <subc> nearest neighbors in the HNSW graph
         void compute_inter_centroid_dists();
 
+        /// Write distance between centroids to file given by path
+        void dump_inter_centroid_dists(char *path);
+
     protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points
         std::vector<float> query_centroid_dists;

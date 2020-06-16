@@ -541,6 +541,28 @@ namespace ivfhnsw
         }
     }
 
+    void IndexIVF_HNSW_Grouping::dump_inter_centroid_dists(char *path)
+    {
+        FILE *fp;
+        char buf[512];
+
+        fp = fopen(path, "w");
+        if (fp == NULL) {
+            std::cout << "Failed to open file: " << path << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < nc; i++) {
+            for (size_t subc = 0; subc < nsubc; subc++) {
+                sprintf(buf, "distance of centriod %lu to centriod %lu is %f\n",
+                        i, subc, inter_centroid_dists[i][subc]);
+                fwrite(buf, 1, strlen(buf), fp);
+            }
+        }
+
+        fclose(fp);
+    }
+
     void IndexIVF_HNSW_Grouping::compute_residuals(size_t n, const float *x, float *residuals,
                                                    const float *subcentroids, const idx_t *keys)
     {

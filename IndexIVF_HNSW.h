@@ -15,6 +15,7 @@
 
 #include <hnswlib/hnswalg.h>
 #include "utils.h"
+#include "orcv.h"
 
 namespace ivfhnsw {
     /** Index based on a inverted file (IVF) with Product Quantizer encoding.
@@ -61,9 +62,22 @@ namespace ivfhnsw {
         std::vector<std::vector<uint8_t> > codes;       ///< PQ codes of residuals
         std::vector<std::vector<uint8_t> > norm_codes;  ///< PQ codes of norms of reconstructed base vectors
 
+        // information associated with hdr.vec file
+        orcvhdr_t hdr_idx;
+
     protected:
         std::vector<float> norms;           ///< L2 square norms of reconstructed base vectors
         std::vector<float> centroid_norms;  ///< L2 square norms of coarse centroids
+
+        /// clone file_src in new file named file_dst
+        int copy_file(const char *file_src, const char *file_dst);
+
+        // Min number of edges per point
+        size_t M;
+
+        // match search and nearly search parameter
+        float dmatch = 4444.0;
+        float dnear = 8888.0;
 
     public:
         explicit IndexIVF_HNSW(size_t dim, size_t ncentroids, size_t bytes_per_code,
@@ -121,6 +135,9 @@ namespace ivfhnsw {
 
         /// Write index to the path
         virtual void write(const char *path);
+
+        // write ORCV format index files
+        virtual void write2(const char *home_dir, size_t n_vecs, bool do_opq, const char *path_edge);
 
         /// Read index from the path
         virtual void read(const char *path);

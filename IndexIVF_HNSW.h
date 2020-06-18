@@ -128,6 +128,17 @@ namespace ivfhnsw {
         */
         virtual void add_batch(size_t n, const float *x, const idx_t *xids, const idx_t *precomputed_idx = nullptr);
 
+        /** Add n vectors of dimension d to the index.
+          *
+          * @param n                 number of base vectors in a batch
+          * @param x                 base vectors to add, size n * d
+          * @param xids              ids to store for the vectors (size n)
+          * @param idx               internal ids assigned to vectors
+          * @param eids              external edis assigned to vectors
+          * @param obuf              output buffer store above info together
+        */
+        virtual void add_batch2(size_t n, const float *x, const idx_t *xids, const idx_t *idx, uint64_t *eids, char *obuf);
+
         /** Train product quantizers
           *
           * @param n     number of training vectors of dimension d
@@ -149,6 +160,9 @@ namespace ivfhnsw {
 
         /// For correct search using OPQ encoding rotate points in the coarse quantizer
         void rotate_quantizer();
+
+        void search2(size_t k, const float *x, float *distances, long *labels, float *query_centroid_dists, idx_t *centroid_idxs);
+        void search2m(size_t k, const float *x, float *distances[], long *labels[], float *query_centroid_dists, idx_t *centroid_idxs);
 
     protected:
         /// Size pq.M * pq.ksub

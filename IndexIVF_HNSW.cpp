@@ -135,6 +135,72 @@ namespace ivfhnsw {
             delete idx;
     }
 
+    void IndexIVF_HNSW::add_batch2(size_t n, const float *x, const idx_t *xids,
+                                   const idx_t *idx, uint64_t *eids, char *obuf)
+    {
+        // Compute residuals for original vectors
+        std::vector<float> residuals(n * d);
+        compute_residuals(n, x, residuals.data(), idx);
+
+        // If do_opq, rotate residuals
+        if (do_opq){
+            std::vector<float> copy_residuals(n * d);
+            memcpy(copy_residuals.data(), residuals.data(), n * d * sizeof(float));
+            opq_matrix->apply_noalloc(n, copy_residuals.data(), residuals.data());
+        }
+
+        // Encode residuals
+        std::vector <uint8_t> xcodes(n * code_size);
+        pq->compute_codes(residuals.data(), xcodes.data(), n);
+
+        // Decode residuals
+        std::vector<float> decoded_residuals(n * d);
+        pq->decode(xcodes.data(), decoded_residuals.data(), n);
+
+        // Reverse rotation
+        if (do_opq){
+            std::vector<float> copy_decoded_residuals(n * d);
+            memcpy(copy_decoded_residuals.data(), decoded_residuals.data(), n * d * sizeof(float));
+            opq_matrix->transform_transpose(n, copy_decoded_residuals.data(), decoded_residuals.data());
+        }
+
+        // Reconstruct original vectors
+        std::vector<float> reconstructed_x(n * d);
+        reconstruct(n, reconstructed_x.data(), decoded_residuals.data(), idx);
+
+        // Compute l2 square norms of reconstructed vectors
+        std::vector<float> norms(n);
+        faiss::fvec_norms_L2sqr(norms.data(), reconstructed_x.data(), d, n);
+
+        // Encode norms
+        std::vector <uint8_t> xnorm_codes(n);
+        norm_pq->compute_codes(norms.data(), xnorm_codes.data(), n);
+
+        // Add vector indices and PQ codes for residuals and norms to Index
+        // create the output buffer for this vector set
+        char *p = obuf;
+        for (size_t i = 0; i < n; i++) {
+            const idx_t key = idx[i];
+            const idx_t id = xids[i];
+            ids[key].push_back(id);
+            uint64_t *eid = (uint64_t *)p;
+            *eid = *eids++;
+            p += sizeof(uint64_t);
+            const uint8_t *code = xcodes.data() + i * code_size;
+            for (size_t j = 0; j < code_size; j++) {
+                uint8_t *cp = (uint8_t *)p;
+                *cp++ = code[j];
+                p++;
+                codes[key].push_back(code[j]);
+            }
+
+            norm_codes[key].push_back(xnorm_codes[i]);
+            uint8_t *cp = (uint8_t *)p;
+            *cp++ = xnorm_codes[i];
+            p++;
+        }
+    }
+
     /** Search procedure
       *
       * During IVF-HNSW-PQ search we compute
@@ -215,6 +281,88 @@ namespace ivfhnsw {
             delete const_cast<float *>(query);
     }
 
+    void IndexIVF_HNSW::search2(size_t k, const float *x, float *distances, long *labels, float *query_centroid_dists, idx_t *centroid_idxs)
+    {
+        // For correct search using OPQ rotate a query
+        const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
+        // Precompute table
+        pq->compute_inner_prod_table(query, precomputed_table.data());
+
+        // Prepare max heap with k answers
+        faiss::maxheap_heapify(k, distances, labels);
+
+        size_t ncode = 0;
+        for (size_t i = 0; i < nprobe; i++) {
+            const idx_t centroid_idx = centroid_idxs[i];
+            const size_t group_size = norm_codes[centroid_idx].size();
+            if (group_size == 0)
+                continue;
+
+            const uint8_t *code = codes[centroid_idx].data();
+            const uint8_t *norm_code = norm_codes[centroid_idx].data();
+            const idx_t *id = ids[centroid_idx].data();
+            const float term1 = query_centroid_dists[i] - centroid_norms[centroid_idx];
+
+            // Decode the norms of each vector in the list
+            norm_pq->decode(norm_code, norms.data(), group_size);
+
+            for (size_t j = 0; j < group_size; j++) {
+                const float term3 = 2 * pq_L2sqr(code + j * code_size);
+                const float dist = term1 + norms[j] - term3; //term2 = norms[j]
+                if (dist < distances[0]) {
+                    faiss::maxheap_pop(k, distances, labels);
+                    faiss::maxheap_push(k, distances, labels, dist, id[j]);
+                }
+            }
+            ncode += group_size;
+            if (ncode >= max_codes)
+                break;
+        }
+        if (do_opq)
+            delete const_cast<float *>(query);
+    }
+
+
+    void IndexIVF_HNSW::search2m(size_t k, const float *x, float *distances[], long *labels[], float *query_centroid_dists, idx_t *centroid_idxs)
+    {
+        // For correct search using OPQ rotate a query
+        const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
+        // Precompute table
+        pq->compute_inner_prod_table(query, precomputed_table.data());
+
+        size_t ncode = 0;
+    #pragma omp parallel for
+        for (size_t i = 0; i < nprobe; i++) {
+          // Prepare max heap with k answers
+            faiss::maxheap_heapify(k, distances[i], labels[i]);
+            const idx_t centroid_idx = centroid_idxs[i];
+            const size_t group_size = norm_codes[centroid_idx].size();
+            if (group_size == 0)
+                continue;
+
+            const uint8_t *code = codes[centroid_idx].data();
+            const uint8_t *norm_code = norm_codes[centroid_idx].data();
+            const idx_t *id = ids[centroid_idx].data();
+            const float term1 = query_centroid_dists[i] - centroid_norms[centroid_idx];
+
+            // Decode the norms of each vector in the list
+            norm_pq->decode(norm_code, norms.data(), group_size);
+
+            for (size_t j = 0; j < group_size; j++) {
+                const float term3 = 2 * pq_L2sqr(code + j * code_size);
+                const float dist = term1 + norms[j] - term3; //term2 = norms[j]
+                if (dist < *(distances[0])) {
+                    faiss::maxheap_pop(k, distances[i], labels[i]);
+                    faiss::maxheap_push(k, distances[i], labels[i], dist, id[j]);
+                }
+            }
+          //  ncode += group_size;
+          //  if (ncode >= max_codes)
+          //      break;
+        }
+        if (do_opq)
+            delete const_cast<float *>(query);
+    }
 
     void IndexIVF_HNSW::train_pq(size_t n, const float *x)
     {

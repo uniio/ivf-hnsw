@@ -65,6 +65,8 @@ namespace ivfhnsw {
         // information associated with hdr.vec file
         orcvhdr_t hdr_idx;
 
+        std::vector<float> &get_centroid_norms() { return centroid_norms; }
+
     protected:
         std::vector<float> norms;           ///< L2 square norms of reconstructed base vectors
         std::vector<float> centroid_norms;  ///< L2 square norms of coarse centroids

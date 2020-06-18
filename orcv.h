@@ -1,5 +1,5 @@
 /*
- * orcv.hpp
+ * orcv.h
  *
  */
 
@@ -20,7 +20,6 @@ typedef struct orcvhdr {
     float dnear;           // distance for vector near match
     uint8_t do_opq;           // if vector rotation matrix is used
 } orcvhdr_t;
-
 
 
 #endif /* ORCV_H_ */

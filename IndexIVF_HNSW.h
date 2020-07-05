@@ -17,6 +17,9 @@
 #include "utils.h"
 #include "orcv.h"
 
+// used for info tracing
+#define TRACE_CENTROIDS
+
 namespace ivfhnsw {
     /** Index based on a inverted file (IVF) with Product Quantizer encoding.
       *
@@ -66,6 +69,12 @@ namespace ivfhnsw {
         orcvhdr_t hdr_idx;
 
         std::vector<float> &get_centroid_norms() { return centroid_norms; }
+
+        // used for profile algorithm, trace centroids info in search
+        std::vector<float> trace_query_centroid_dists;
+        std::vector<idx_t> trace_centroid_idxs;
+
+        void trace_centroids(size_t idx_q, bool missed);
 
     protected:
         std::vector<float> norms;           ///< L2 square norms of reconstructed base vectors
@@ -118,6 +127,8 @@ namespace ivfhnsw {
          * @param labels      output labels of the nearest neighbours, size k
          */
         virtual void search(size_t k, const float *x, float *distances, long *labels);
+        virtual void search_debug(size_t k, const float *x, float *distances, long *labels);
+        virtual idx_t search_enn(const float *x, float *distances, long *labels);
 
         /** Add n vectors of dimension d to the index.
           *

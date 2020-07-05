@@ -237,13 +237,25 @@ namespace ivfhnsw {
         // For correct search using OPQ rotate a query
         const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
 
+#ifdef TRACE_CENTROIDS
+        trace_query_centroid_dists.clear();
+		trace_centroid_idxs.clear();
+#endif
+
         // Find the nearest coarse centroids to the query
         auto coarse = quantizer->searchKnn(query, nprobe);
         for (int_fast32_t i = nprobe - 1; i >= 0; i--) {
             query_centroid_dists[i] = coarse.top().first;
             centroid_idxs[i] = coarse.top().second;
+
+#ifdef TRACE_CENTROIDS
+            trace_query_centroid_dists.push_back(coarse.top().first);
+		    trace_centroid_idxs.push_back(coarse.top().second);
+#endif
+
             coarse.pop();
         }
+
         // Precompute table
         pq->compute_inner_prod_table(query, precomputed_table.data());
 
@@ -279,6 +291,161 @@ namespace ivfhnsw {
         }
         if (do_opq)
             delete const_cast<float *>(query);
+    }
+
+    void IndexIVF_HNSW::trace_centroids(size_t idx_q, bool missed)
+    {
+    	char *hit_log = "centroids_hit.log";
+    	char *miss_log = "centroids_miss.log";
+        std::ofstream log_trace;
+        if (missed)
+        	log_trace.open(miss_log, std::ofstream::out | std::ofstream::app);
+        else
+        	log_trace.open(hit_log, std::ofstream::out | std::ofstream::app);
+
+        if (!log_trace.is_open()) {
+            std::cout << "Failed to open log file for centroids traceing" << std::endl;
+            return;
+        }
+
+        auto sz = trace_centroid_idxs.size();
+        std::cout << "centroids number " << sz << std::endl;
+        if (sz > 0) log_trace << "query " << idx_q << " centroids info\n";
+        for (size_t i = 0; i < sz; i++) {
+        	auto centroid_idx = trace_centroid_idxs[i];
+        	log_trace << "centroid ";
+            log_trace << centroid_idx;
+            log_trace << " with distance ";
+            log_trace << trace_query_centroid_dists[i];
+            log_trace << " with group size " << norm_codes[centroid_idx].size();
+            log_trace << "\n";
+        }
+        log_trace.close();
+    }
+
+    void IndexIVF_HNSW::search_debug(size_t k, const float *x, float *distances, long *labels)
+    {
+        float query_centroid_dists[nprobe]; // Distances to the coarse centroids.
+        idx_t centroid_idxs[nprobe];        // Indices of the nearest coarse centroids
+
+        // For correct search using OPQ rotate a query
+        const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
+
+        // Find the nearest coarse centroids to the query
+        auto coarse = quantizer->searchKnn(query, nprobe);
+        for (int_fast32_t i = nprobe - 1; i >= 0; i--) {
+            query_centroid_dists[i] = coarse.top().first;
+            centroid_idxs[i] = coarse.top().second;
+            coarse.pop();
+        }
+
+        std::cout << "coarse centroids info:" << std::endl;
+        for (int_fast32_t i = nprobe - 1; i >= 0; i--) {
+            std::cout << "centroid "
+                      << centroid_idxs[i]
+                      << " with query distance of "
+                      << query_centroid_dists[i] << std::endl;
+
+            const idx_t centroid_idx = centroid_idxs[i];
+            const size_t group_size = norm_codes[centroid_idx].size();
+            std::cout << "group size: " << group_size << std::endl;
+        }
+
+        // Precompute table
+        pq->compute_inner_prod_table(query, precomputed_table.data());
+
+        // Prepare max heap with k answers
+        faiss::maxheap_heapify(k, distances, labels);
+
+        size_t ncode = 0;
+        for (size_t i = 0; i < nprobe; i++) {
+            const idx_t centroid_idx = centroid_idxs[i];
+            const size_t group_size = norm_codes[centroid_idx].size();
+            if (group_size == 0)
+                continue;
+
+            const uint8_t *code = codes[centroid_idx].data();
+            const uint8_t *norm_code = norm_codes[centroid_idx].data();
+            const idx_t *id = ids[centroid_idx].data();
+            const float term1 = query_centroid_dists[i] - centroid_norms[centroid_idx];
+
+            // Decode the norms of each vector in the list
+            norm_pq->decode(norm_code, norms.data(), group_size);
+
+            for (size_t j = 0; j < group_size; j++) {
+                const float term3 = 2 * pq_L2sqr(code + j * code_size);
+                const float dist = term1 + norms[j] - term3; //term2 = norms[j]
+                if (dist < distances[0]) {
+                    faiss::maxheap_pop(k, distances, labels);
+                    faiss::maxheap_push(k, distances, labels, dist, id[j]);
+                }
+            }
+            ncode += group_size;
+            if (ncode >= max_codes)
+                break;
+        }
+        if (do_opq)
+            delete const_cast<float *>(query);
+    }
+
+    IndexIVF_HNSW::idx_t IndexIVF_HNSW::search_enn(const float *x, float *distances, long *labels)
+    {
+        // hide nprobe value in class set
+        const size_t nprobe = 1;
+        const size_t k = 1;
+        float query_centroid_dists[nprobe]; // Distances to the coarse centroids.
+        idx_t centroid_idxs[nprobe];        // Indices of the nearest coarse centroids
+
+        // For correct search using OPQ rotate a query
+        const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
+
+        // Find the nearest coarse centroids to the query
+        auto coarse = quantizer->searchKnn(query, nprobe);
+        for (int_fast32_t i = nprobe - 1; i >= 0; i--) {
+            query_centroid_dists[i] = coarse.top().first;
+            centroid_idxs[i] = coarse.top().second;
+            coarse.pop();
+        }
+
+        std::cout << "Get centroid in ENN: " << centroid_idxs[0] << std::endl;
+
+        // Precompute table
+        pq->compute_inner_prod_table(query, precomputed_table.data());
+
+        // Prepare max heap with k answers
+        faiss::maxheap_heapify(k, distances, labels);
+
+        size_t ncode = 0;
+        for (size_t i = 0; i < nprobe; i++) {
+            const idx_t centroid_idx = centroid_idxs[i];
+            const size_t group_size = norm_codes[centroid_idx].size();
+            if (group_size == 0)
+                continue;
+
+            const uint8_t *code = codes[centroid_idx].data();
+            const uint8_t *norm_code = norm_codes[centroid_idx].data();
+            const idx_t *id = ids[centroid_idx].data();
+            const float term1 = query_centroid_dists[i] - centroid_norms[centroid_idx];
+
+            // Decode the norms of each vector in the list
+            norm_pq->decode(norm_code, norms.data(), group_size);
+
+            for (size_t j = 0; j < group_size; j++) {
+                const float term3 = 2 * pq_L2sqr(code + j * code_size);
+                const float dist = term1 + norms[j] - term3; //term2 = norms[j]
+                if (dist < distances[0]) {
+                    faiss::maxheap_pop(k, distances, labels);
+                    faiss::maxheap_push(k, distances, labels, dist, id[j]);
+                }
+            }
+            ncode += group_size;
+            if (ncode >= max_codes)
+                break;
+        }
+        if (do_opq)
+            delete const_cast<float *>(query);
+
+        return centroid_idxs[0];
     }
 
     void IndexIVF_HNSW::search2(size_t k, const float *x, float *distances, long *labels, float *query_centroid_dists, idx_t *centroid_idxs)

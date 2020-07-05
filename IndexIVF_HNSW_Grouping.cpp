@@ -1,4 +1,7 @@
 #include "IndexIVF_HNSW_Grouping.h"
+#include <algorithm>
+
+#define TRACE_NEIGHBOUR
 
 namespace ivfhnsw
 {
@@ -195,15 +198,27 @@ namespace ivfhnsw
         // For correct search using OPQ rotate a query
         const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
 
+#ifdef TRACE_CENTROIDS
+        trace_query_centroid_dists.clear();
+		trace_centroid_idxs.clear();
+#endif
+
         // Find the nearest coarse centroids to the query
         auto coarse = quantizer->searchKnn(query, nprobe);
         for (int_fast32_t i = nprobe - 1; i >= 0; i--) {
             idx_t centroid_idx = coarse.top().second;
             centroid_idxs[i] = centroid_idx;
             query_centroid_dists[centroid_idx] = coarse.top().first;
+
+#ifdef TRACE_CENTROIDS
+            trace_query_centroid_dists.push_back(coarse.top().first);
+		    trace_centroid_idxs.push_back(coarse.top().second);
+#endif
+
             used_centroid_idxs.push_back(centroid_idx);
             coarse.pop();
         }
+
         // Computing threshold for pruning
         float threshold = 0.0;
         if (do_pruning) {
@@ -255,6 +270,17 @@ namespace ivfhnsw
         size_t ncode = 0;
         const float *qsd = query_subcentroid_dists.data();
 
+#ifdef TRACE_NEIGHBOUR
+    	std::vector<float> query_vector_dists;
+    	char *neighbour_log = "neighbour_hit.log";
+    	std::ofstream log_trace;
+    	log_trace.open(neighbour_log, std::ofstream::out | std::ofstream::app);
+        if (!log_trace.is_open()) {
+            std::cout << "Failed to open log file for neighbour traceing" << std::endl;
+        }
+        size_t vsz;
+#endif
+
         for (size_t i = 0; i < nprobe; i++) {
             const idx_t centroid_idx = centroid_idxs[i];
             const size_t group_size = norm_codes[centroid_idx].size();
@@ -267,6 +293,13 @@ namespace ivfhnsw
             const uint8_t *code = codes[centroid_idx].data();
             const uint8_t *norm_code = norm_codes[centroid_idx].data();
             const idx_t *id = ids[centroid_idx].data();
+
+#ifdef TRACE_NEIGHBOUR
+            log_trace << "centroid " << centroid_idx << " with threshold: " << threshold;
+            log_trace << " get neighbours distance:\n";
+            query_vector_dists.clear();
+            vsz = 0;
+#endif
 
             for (size_t subc = 0; subc < nsubc; subc++) {
                 const size_t subgroup_size = subgroup_sizes[centroid_idx][subc];
@@ -284,12 +317,33 @@ namespace ivfhnsw
                         used_centroid_idxs.push_back(nn_centroid_idx);
                     }
 
+#ifdef TRACE_NEIGHBOUR
+//                    if (log_trace.is_open()) {
+//                    	const idx_t nn_centroid_idx = nn_centroid_idxs[centroid_idx][subc];
+//                    	const float *nn_centroid = quantizer->getDataByInternalId(nn_centroid_idx);
+//                        log_trace << "sub group size: " << subgroup_size << "with centroid:\n";
+//                        for (size_t iv = 0; iv < d; iv++) {
+//                        	log_trace << nn_centroid[iv];
+//                        	if (iv == d - 1)
+//                        		log_trace << "\n";
+//                        	else
+//                        		log_trace << " ";
+//                        }
+//                    }
+#endif
+
                     const float term2 = alpha * (query_centroid_dists[nn_centroid_idx] - centroid_norms[nn_centroid_idx]);
                     norm_pq->decode(norm_code, norms.data(), subgroup_size);
 
                     for (size_t j = 0; j < subgroup_size; j++) {
                         const float term4 = 2 * pq_L2sqr(code + j * code_size);
                         const float dist = term1 + term2 + norms[j] - term4; //term3 = norms[j]
+#ifdef TRACE_NEIGHBOUR
+                        if (log_trace.is_open()) {
+                            query_vector_dists.push_back(dist);
+                            vsz++;
+                        }
+#endif
                         if (dist < distances[0]) {
                             faiss::maxheap_pop(k, distances, labels);
                             faiss::maxheap_push(k, distances, labels, dist, id[j]);
@@ -302,11 +356,22 @@ namespace ivfhnsw
                 norm_code += subgroup_size;
                 id += subgroup_size;
             }
+#ifdef TRACE_NEIGHBOUR
+            if (log_trace.is_open()) {
+                std::sort(query_vector_dists.begin(), query_vector_dists.end());
+                for (auto it = query_vector_dists.begin(); it < query_vector_dists.end(); it++) {
+                	log_trace << *it << "\n";
+                }
+            }
+#endif
             if (ncode >= max_codes)
                 break;
             if (do_pruning)
                 qsd += nsubc;
         }
+#ifdef TRACE_NEIGHBOUR
+        if (log_trace.is_open()) log_trace.close();
+#endif
         // Zero computed dists for later queries
         for (idx_t used_centroid_idx : used_centroid_idxs)
             query_centroid_dists[used_centroid_idx] = 0;

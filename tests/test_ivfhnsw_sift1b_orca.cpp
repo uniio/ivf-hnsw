@@ -11,6 +11,80 @@
 using namespace hnswlib;
 using namespace ivfhnsw;
 
+//#define DEBUG_SHOW_PRECOMPUTED_INDEX
+#define DEBUG_SHOW_QUERY_CENTROIDS
+
+void ShowPreComputedIndex (std::priority_queue< std::pair<float, idx_t >> answer, size_t idx_q,
+		                   const char *path_precomputed_idxs) {
+    std::cout << "Query miss happened on query: " << idx_q << std::endl;
+    std::cout << "answer is: " << std::endl;
+
+    auto item = answer.top();
+    std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
+
+    const uint32_t batch_size = 1000000;
+    auto vec_id = item.second;
+    auto vec_off = (vec_id / batch_size + 1) * sizeof(uint32_t) + vec_id * sizeof(idx_t);
+    idx_t PreComputedIndex;
+
+    std::ifstream fs_input(path_precomputed_idxs, std::ios::binary);
+    fs_input.seekg(vec_off, fs_input.beg);
+    fs_input.read((char *)&PreComputedIndex, sizeof(idx_t));
+
+    std::cout << "precomputed index is: ";
+    std::cout << PreComputedIndex << std::endl;
+}
+
+template<typename T>
+void
+showVector(const std::vector<T> &vec) {
+    size_t v_sz = vec.size();
+    std::cout << "[";
+    for (size_t i = 0; i < v_sz; i++) {
+        std::cout << vec[i];
+        if (i == v_sz - 1)
+            std::cout << "]";
+        else
+            std::cout << " ";
+    }
+    std::cout << std::endl;
+}
+
+void
+showCentroid(size_t centroid_idx, Parser &opt) {
+    std::ifstream fs_input(opt.path_centroids, std::ios::binary);
+
+    auto centroid_off = centroid_idx * (sizeof(uint32_t) + opt.d * sizeof(float));
+    std::vector<float> dbuf(opt.d);
+    std::vector<uint8_t> dbuf_b(opt.d);
+    fs_input.seekg(centroid_off, fs_input.beg);
+    readXvec<float>(fs_input, dbuf.data(), opt.d);
+    fs_input.close();
+
+    showVector(dbuf);
+}
+
+std::vector<float>
+getBaseVectorByAnswer (std::priority_queue< std::pair<float, idx_t >> answer,
+                       Parser &opt) {
+    auto item = answer.top();
+    std::cout << "Answer is: " << std::endl;
+    std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
+
+    auto vec_id = item.second;
+    auto vec_off = vec_id * (sizeof(uint32_t) + opt.d);
+    std::vector<float> dbuf(opt.d);
+    std::ifstream fs_input(opt.path_base, std::ios::binary);
+    fs_input.seekg(vec_off, fs_input.beg);
+    readXvecFvec<uint8_t>(fs_input, dbuf.data(), opt.d, 1);
+    fs_input.close();
+
+    std::cout << "get vector from base file: " << opt.path_base << std::endl;
+    showVector<float>(dbuf);
+
+    return dbuf;
+}
+
 //====================
 // IVF-HNSW on SIFT1B
 //====================
@@ -148,14 +222,7 @@ int main(int argc, char **argv)
             for (size_t i = 0; i < batch_size; i++)
                 ids_batch[i] = batch_size * b + i;
 
-            // obuf unit is 25 bytes, here use 32, no discuss further
-            uint64_t *eids = new uint64_t[batch_size];
-            char *obuf = new char[batch_size*32];
             index->add_batch(batch_size, batch.data(), ids_batch.data(), idx_batch.data());
-            index->add_batch2(batch_size, batch.data(), ids_batch.data(), idx_batch.data(),
-            		eids, obuf);
-            delete eids;
-            delete obuf;
         }
 
         // Computing Centroid Norms
@@ -210,6 +277,22 @@ int main(int argc, char **argv)
             if (g.count(labels[j]) != 0) {
                 correct++;
                 break;
+            } else {
+                // trigger miss
+#ifdef DEBUG_SHOW_PRECOMPUTED_INDEX
+                ShowPreComputedIndex(answers[i], i, opt.path_base);
+#endif
+#ifdef DEBUG_SHOW_QUERY_CENTROIDS
+                index->search_debug(opt.k, massQ.data() + i*opt.d, distances, labels);
+                for (size_t dist_i = 0; dist_i < opt.k; dist_i++) {
+                    std::cout << "distance " << dist_i << " is "
+                              << distances[dist_i] << std::endl;
+                }
+#endif
+                const auto &gt_base = getBaseVectorByAnswer (answers[i], opt);
+                const auto centroid_idx = index->search_enn(gt_base.data(), distances, labels);
+                showCentroid(centroid_idx, opt);
+                exit(0);
             }
     }
 

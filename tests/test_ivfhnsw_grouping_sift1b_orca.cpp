@@ -4,12 +4,29 @@
 #include <stdlib.h>
 #include <queue>
 #include <unordered_set>
+#include <algorithm>
 
 #include <ivf-hnsw/IndexIVF_HNSW_Grouping.h>
 #include <ivf-hnsw/Parser.h>
 
 using namespace hnswlib;
 using namespace ivfhnsw;
+
+typedef struct SearchInfo {
+    float distance;
+    long label;
+} SearchInfo_t;
+
+bool cmp(SearchInfo_t a, SearchInfo_t b) {
+    if (a.distance > b.distance) {
+        return false;
+    } else if (abs(b.distance - a.distance) <= 0.001) {
+        // two distance equals
+        return (a.label < b.label);
+    } else {
+        return true;
+    }
+}
 
 //===========================================
 // IVF-HNSW + Grouping (+ Pruning) on DEEP1B
@@ -230,6 +247,7 @@ int main(int argc, char **argv) {
     size_t correct = 0;
     float distances[opt.k];
     long labels[opt.k];
+    std::vector<SearchInfo_t> searchRet;
 
     StopW stopw = StopW();
     for (size_t i = 0; i < opt.nq; i++) {
@@ -242,11 +260,75 @@ int main(int argc, char **argv) {
             gt.pop();
         }
 
+        bool hdr_loged = false;
         for (size_t j = 0; j < opt.k; j++)
             if (g.count(labels[j]) != 0) {
                 correct++;
+#if 1
+//                if (i == 0)
+                {
+                    auto answer = answers[i];
+                    auto item = answer.top();
+                    std::vector<float> dists(opt.k);
+                    if (!hdr_loged) {
+                        std::cout << "found in query " << i << std::endl;
+                        std::cout << "answer ";
+                        std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
+                        hdr_loged = true;
+                    }
+                    SearchInfo_t sret;
+                    for (int di = opt.k - 1; di >= 0; di--) {
+                        sret.distance = distances[di];
+                        sret.label = labels[di];
+                        searchRet.push_back(sret);
+                    }
+                    std::sort(searchRet.begin(), searchRet.end(), cmp);
+                    for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
+                        auto item = *it;
+                        std::cout << "distance " << item.distance;
+                        std::cout << " label " << item.label << std::endl;
+                    }
+//                	std::cout << "found in query " << i << std::endl;
+//                	std::cout << "answer ";
+//                	std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
+//                	std::cout << "label " << j << " value "<< labels[j] << std::endl;
+//                	std::cout << "distance list: " << std::endl;
+//                	dists.resize(opt.k);
+//                	for (size_t di = opt.k - 1; di >= 0; di--)
+//                		std::cout << distances[di] << std::endl;
+//                		dists[di] = distances[di];
+//                	std::sort(dists.begin(), dists.end());
+//                	for (size_t di = 0; di < opt.k; di++)
+//                		std::cout << dists[di] << " " << std::endl;
+                	index->trace_centroids(i, false);
+                	exit(0);
+                }
+#endif
                 break;
+            } else {
+#if 0
+            	auto answer = answers[i];
+            	auto item = answer.top();
+        	    std::cout << "not found in query " << i << std::endl;
+        	    std::cout << "answer ";
+        	    std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
+            	SearchInfo_t sret;
+            	for (int di = opt.k - 1; di >= 0; di--) {
+                	sret.distance = distances[di];
+                	sret.label = labels[di];
+                	searchRet.push_back(sret);
+            	}
+            	std::sort(searchRet.begin(), searchRet.end(), cmp);
+            	for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
+            		auto item = *it;
+            		std::cout << "distance " << item.distance;
+                	std::cout << " label " << item.label << std::endl;
+            	}
+#endif
             }
+
+        index->trace_centroids(i, true);
+        exit(0);
     }
     //===================
     // Represent results 

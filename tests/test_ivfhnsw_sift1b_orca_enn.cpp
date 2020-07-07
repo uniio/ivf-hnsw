@@ -7,6 +7,7 @@
 
 #include <ivf-hnsw/IndexIVF_HNSW.h>
 #include <ivf-hnsw/Parser.h>
+#include <ivf-hnsw/hnswalg.h>
 
 using namespace hnswlib;
 using namespace ivfhnsw;

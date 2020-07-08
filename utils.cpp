@@ -86,4 +86,24 @@ namespace ivfhnsw {
         return (res);
         #endif
     }
+
+    // help function for getL2Distance, to get original vector from base vector file by
+    // vector id, and store result in data
+    int readBaseVec(const char *path_base, const size_t dim, const size_t vec_id, float *data) {
+        auto vec_off = vec_id * (sizeof(uint32_t) + dim);
+        std::ifstream fs_input(path_base, std::ios::binary);
+        fs_input.seekg(vec_off, fs_input.beg);
+        readXvecFvec<uint8_t>(fs_input, data, dim, 1);
+        fs_input.close();
+
+        return 0;
+    }
+
+    // calculate distance between query vector and vector in base vector file indicated by vector id
+    float getL2Distance(const float *query, const char *path_base, const size_t dim, const long vec_id) {
+        std::vector<float> baseVec(dim);
+
+        readBaseVec(path_base, dim, vec_id, baseVec.data());
+        return fvec_L2sqr(query, baseVec.data(), dim);
+    }
 }

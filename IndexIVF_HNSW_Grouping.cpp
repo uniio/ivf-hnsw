@@ -278,7 +278,6 @@ namespace ivfhnsw
         if (!log_trace.is_open()) {
             std::cout << "Failed to open log file for neighbour traceing" << std::endl;
         }
-        size_t vsz;
 #endif
 
         for (size_t i = 0; i < nprobe; i++) {
@@ -298,7 +297,6 @@ namespace ivfhnsw
             log_trace << "centroid " << centroid_idx << " with threshold: " << threshold;
             log_trace << " get neighbours distance:\n";
             query_vector_dists.clear();
-            vsz = 0;
 #endif
 
             for (size_t subc = 0; subc < nsubc; subc++) {
@@ -317,21 +315,6 @@ namespace ivfhnsw
                         used_centroid_idxs.push_back(nn_centroid_idx);
                     }
 
-#ifdef TRACE_NEIGHBOUR
-//                    if (log_trace.is_open()) {
-//                    	const idx_t nn_centroid_idx = nn_centroid_idxs[centroid_idx][subc];
-//                    	const float *nn_centroid = quantizer->getDataByInternalId(nn_centroid_idx);
-//                        log_trace << "sub group size: " << subgroup_size << "with centroid:\n";
-//                        for (size_t iv = 0; iv < d; iv++) {
-//                        	log_trace << nn_centroid[iv];
-//                        	if (iv == d - 1)
-//                        		log_trace << "\n";
-//                        	else
-//                        		log_trace << " ";
-//                        }
-//                    }
-#endif
-
                     const float term2 = alpha * (query_centroid_dists[nn_centroid_idx] - centroid_norms[nn_centroid_idx]);
                     norm_pq->decode(norm_code, norms.data(), subgroup_size);
 
@@ -341,7 +324,6 @@ namespace ivfhnsw
 #ifdef TRACE_NEIGHBOUR
                         if (log_trace.is_open()) {
                             query_vector_dists.push_back(dist);
-                            vsz++;
                         }
 #endif
                         if (dist < distances[0]) {

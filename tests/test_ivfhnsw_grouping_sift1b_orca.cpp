@@ -286,21 +286,11 @@ int main(int argc, char **argv) {
                     std::sort(searchRet.begin(), searchRet.end(), cmp);
                     for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
                         auto item = *it;
+                        float realL2dist = getL2Distance(massQ.data() + i*opt.d, opt.path_base, opt.d, item.label);
                         std::cout << "distance " << item.distance;
                         std::cout << " label " << item.label << std::endl;
+                        std::cout << "real distance " << realL2dist << std::endl;
                     }
-//                	std::cout << "found in query " << i << std::endl;
-//                	std::cout << "answer ";
-//                	std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
-//                	std::cout << "label " << j << " value "<< labels[j] << std::endl;
-//                	std::cout << "distance list: " << std::endl;
-//                	dists.resize(opt.k);
-//                	for (size_t di = opt.k - 1; di >= 0; di--)
-//                		std::cout << distances[di] << std::endl;
-//                		dists[di] = distances[di];
-//                	std::sort(dists.begin(), dists.end());
-//                	for (size_t di = 0; di < opt.k; di++)
-//                		std::cout << dists[di] << " " << std::endl;
                 	index->trace_centroids(i, false);
                 	exit(0);
                 }

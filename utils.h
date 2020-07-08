@@ -136,5 +136,8 @@ namespace ivfhnsw {
 
     /// Main fast distance computation function
     float fvec_L2sqr(const float *x, const float *y, size_t d);
+
+    // calculate distance between query vector and vector in base vector file indicated by vector id
+    float getL2Distance(const float *query, const char *path_base, const size_t dim, const long vec_id);
 }
 #endif //IVF_HNSW_LIB_UTILS_H

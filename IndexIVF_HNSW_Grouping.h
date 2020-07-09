@@ -36,6 +36,9 @@ namespace ivfhnsw{
 
         void search(size_t k, const float *x, float *distances, long *labels);
 
+        // apply disk search based on ANN search result
+        void searchDisk(size_t k, const float *query, float *distances, long *labels, const char *path_base);
+
         void write(const char *path_index);
         void read(const char *path_index);
 

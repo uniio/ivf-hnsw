@@ -200,7 +200,7 @@ namespace ivfhnsw
 
 #ifdef TRACE_CENTROIDS
         trace_query_centroid_dists.clear();
-		trace_centroid_idxs.clear();
+        trace_centroid_idxs.clear();
 #endif
 
         // Find the nearest coarse centroids to the query
@@ -209,13 +209,13 @@ namespace ivfhnsw
             idx_t centroid_idx = coarse.top().second;
             centroid_idxs[i] = centroid_idx;
             query_centroid_dists[centroid_idx] = coarse.top().first;
+            used_centroid_idxs.push_back(centroid_idx);
 
 #ifdef TRACE_CENTROIDS
             trace_query_centroid_dists.push_back(coarse.top().first);
-		    trace_centroid_idxs.push_back(coarse.top().second);
+            trace_centroid_idxs.push_back(coarse.top().second);
 #endif
 
-            used_centroid_idxs.push_back(centroid_idx);
             coarse.pop();
         }
 
@@ -360,6 +360,38 @@ namespace ivfhnsw
 
         if (do_opq)
             delete const_cast<float *>(query);
+    }
+
+    void IndexIVF_HNSW_Grouping::searchDisk(size_t k, const float *query, float *distances,
+                                            long *labels, const char *path_base)
+    {
+        float distances_base[2*k];
+        long labels_base[2*k];
+        std::vector<SearchInfo_t> searchRet(2*k);
+
+        // search by ANN first to get 2*k result
+        search(k, query, distances_base, labels_base);
+
+        /*
+         *  get vector from disk according to result's lablel value (vector index in base vector file)
+         *  and recalculate exactly distance between vector and query
+         */
+        SearchInfo_t sret;
+        for (int di = 2*k - 1; di >= 0; di--) {
+            sret.distance = getL2Distance(query, path_base, d,
+                    labels_base[di], base_vec);;
+            sret.label = labels_base[di];
+            searchRet.push_back(sret);
+        }
+
+        // sort search result by real distance then label value
+        std::sort(searchRet.begin(), searchRet.end(), cmp);
+
+        // return top k value with minimize real distance
+        for (int i = 0; i < k; i++) {
+            distances[i] = searchRet[i].distance;
+            labels[i] = searchRet[i].label;
+        }
     }
 
     void IndexIVF_HNSW_Grouping::write(const char *path_index)

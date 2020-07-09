@@ -9,6 +9,7 @@
 #include <ivf-hnsw/IndexIVF_HNSW_Grouping.h>
 #include <ivf-hnsw/Parser.h>
 #include <ivf-hnsw/hnswalg.h>
+#include <ivf-hnsw/utils.h>
 
 using namespace hnswlib;
 using namespace ivfhnsw;
@@ -286,7 +287,8 @@ int main(int argc, char **argv) {
                     std::sort(searchRet.begin(), searchRet.end(), cmp);
                     for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
                         auto item = *it;
-                        float realL2dist = getL2Distance(massQ.data() + i*opt.d, opt.path_base, opt.d, item.label);
+                        float realL2dist = getL2Distance(massQ.data() + i*opt.d, opt.path_base, opt.d,
+                                                         item.label, base_vec);
                         std::cout << "distance " << item.distance;
                         std::cout << " label " << item.label << std::endl;
                         std::cout << "real distance " << realL2dist << std::endl;

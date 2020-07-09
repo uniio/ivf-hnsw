@@ -89,21 +89,109 @@ namespace ivfhnsw {
 
     // help function for getL2Distance, to get original vector from base vector file by
     // vector id, and store result in data
-    int readBaseVec(const char *path_base, const size_t dim, const size_t vec_id, float *data) {
+    void readBaseVec(const char *path_base, const size_t dim, const size_t vec_id, float *data) {
         auto vec_off = vec_id * (sizeof(uint32_t) + dim);
+
         std::ifstream fs_input(path_base, std::ios::binary);
         fs_input.seekg(vec_off, fs_input.beg);
         readXvecFvec<uint8_t>(fs_input, data, dim, 1);
         fs_input.close();
+    }
 
-        return 0;
+    // read centroid vector from centroid file by centroid index
+    void readCentroidVec(const char *path_centroid, const size_t dim, const long centroid_idx, float *data) {
+        auto centroid_off = centroid_idx * (sizeof(uint32_t) + dim * sizeof(float));
+
+        std::ifstream fs_input(path_centroid, std::ios::binary);
+        fs_input.seekg(centroid_off, fs_input.beg);
+        readXvec<float>(fs_input, data, dim);
+        fs_input.close();
     }
 
     // calculate distance between query vector and vector in base vector file indicated by vector id
-    float getL2Distance(const float *query, const char *path_base, const size_t dim, const long vec_id) {
-        std::vector<float> baseVec(dim);
+    float getL2Distance(const float *query, const char *path_vec, const size_t dim,
+                        const long vec_id, vec_t type_v) {
+        std::vector<float> iVec(dim);
 
-        readBaseVec(path_base, dim, vec_id, baseVec.data());
-        return fvec_L2sqr(query, baseVec.data(), dim);
+        switch (type_v) {
+        case base_vec:
+            readBaseVec(path_vec, dim, vec_id, iVec.data());
+            break;
+
+        case centroid_vec:
+            readCentroidVec(path_vec, dim, vec_id, iVec.data());
+            break;
+
+        default:
+            std::cout << "Invalid vector type: " << type_v << std::endl;
+            assert(0);
+        }
+
+        return fvec_L2sqr(query, iVec.data(), dim);
+    }
+
+    // show vector value in console
+    // vector file path, vector dimention, vector index, vector file type
+    void showVec(const char *path_vec, const size_t dim, const long vec_id, vec_t type_v) {
+        std::vector<float> iVec(dim);
+
+        switch (type_v) {
+        case base_vec:
+            readBaseVec(path_vec, dim, vec_id, iVec.data());
+            break;
+
+        case centroid_vec:
+            readCentroidVec(path_vec, dim, vec_id, iVec.data());
+            break;
+
+        default:
+            std::cout << "Invalid vector type: " << type_v << std::endl;
+            assert(0);
+        }
+
+        auto vsz = iVec.size();
+        std::cout << "[";
+        for (auto i = 0; i < vsz; i++) {
+            std::cout << iVec[i];
+            if (i != vsz - 1) std::cout << " ";
+        }
+        std::cout << "]" << std::endl;
+    }
+
+    void traceVec(std::ofstream &file_trace, const char *path_vec, const size_t dim, const long vec_id, vec_t type_v) {
+        std::vector<float> iVec(dim);
+
+        switch (type_v) {
+        case base_vec:
+            readBaseVec(path_vec, dim, vec_id, iVec.data());
+            break;
+
+        case centroid_vec:
+            readCentroidVec(path_vec, dim, vec_id, iVec.data());
+            break;
+
+        default:
+            std::cout << "Invalid vector type: " << type_v << std::endl;
+            assert(0);
+        }
+
+        auto vsz = iVec.size();
+        file_trace << "[";
+        for (auto i = 0; i < vsz; i++) {
+            file_trace << iVec[i];
+            if (i != vsz - 1) file_trace << " ";
+        }
+        file_trace << "]" << std::endl;
+    }
+
+    bool cmp(SearchInfo_t a, SearchInfo_t b) {
+        if (a.distance > b.distance) {
+            return false;
+        } else if (abs(b.distance - a.distance) <= 0.001) {
+            // two distance equals
+            return (a.label < b.label);
+        } else {
+            return true;
+        }
     }
 }

@@ -23,7 +23,7 @@ using std::string;
 
 const size_t split_count = 10;
 const size_t vector_dim = 128;
-const size_t batch_num = 100000;
+const size_t batch_num = 1000000;
 
 static void
 usage_help(char *cmd)
@@ -62,7 +62,7 @@ cleanup_split(char *path)
 
     // remove dir
     int rc = rmdir(path);
-    if (!rc) {
+    if (rc) {
 		cout << "Failed to delete dir: " << path << endl;
 		return -1;
     }
@@ -84,18 +84,28 @@ file_size(char *path_full)
     return st.st_size;
 }
 
-static char*
-get_basename(char *file_nm)
+static void
+get_basename(char *file_nm, char *file_base)
 {
-	return strtok(file_nm, ".");
+	char tmp_nm[512];
+	strcpy(tmp_nm, file_nm);
+	char *ptr = strstr(tmp_nm, ".");
+	if (ptr == NULL) return;
+
+	*ptr = '\0';
+	strcpy(file_base, tmp_nm);
 }
 
 static int
 split_base(char *path_in, char *path_out)
 {
     char *base_file = (char *)"bigann_base.bvecs";
-    char *base_nm = get_basename(base_file);
+    char base_nm[512];
     char full_path[1024];
+
+    base_nm[0] = '\0';
+    get_basename(base_file, base_nm);
+    if (base_nm[0] == '\0') return -1;
 
     sprintf(full_path, "%s/%s", path_in, base_file);
     size_t sz_base = file_size(full_path);
@@ -128,7 +138,7 @@ split_base(char *path_in, char *path_out)
         	return -1;
         }
         while (!feof(fp_in) && !ferror(fp_in)) {
-        	d_read = fread(buf_in, rec_size, batch_num, fp_in);
+        	d_read = fread(buf_in, 1, rec_size * batch_num, fp_in);
         	if (d_read == 0 || (d_read % rec_size) != 0) {
         		cout << "Failed to read file: " << base_file << endl;
             	fclose(fp_in);
@@ -155,8 +165,12 @@ static int
 split_precomputed_idxs(char *path_in, char *path_out)
 {
     char *base_file = (char *)"precomputed_idxs_sift1b.ivecs";
-    char *base_nm = get_basename(base_file);
+    char base_nm[512];
     char full_path[1024];
+
+    base_nm[0] = '\0';
+    get_basename(base_file, base_nm);
+    if (base_nm[0] == '\0') return -1;
 
     sprintf(full_path, "%s/%s", path_in, base_file);
     size_t sz_base = file_size(full_path);
@@ -190,7 +204,7 @@ split_precomputed_idxs(char *path_in, char *path_out)
         	return -1;
         }
         while (!feof(fp_in) && !ferror(fp_in)) {
-        	d_read = fread(buf_in, batch_dsize, 1, fp_in);
+        	d_read = fread(buf_in, 1, batch_dsize, fp_in);
         	if (d_read == 0 ) {
         		cout << "Failed to read file: " << base_file << endl;
             	fclose(fp_in);

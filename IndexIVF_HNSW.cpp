@@ -239,7 +239,7 @@ namespace ivfhnsw {
 
 #ifdef TRACE_CENTROIDS
         trace_query_centroid_dists.clear();
-		trace_centroid_idxs.clear();
+        trace_centroid_idxs.clear();
 #endif
 
         // Find the nearest coarse centroids to the query
@@ -250,7 +250,7 @@ namespace ivfhnsw {
 
 #ifdef TRACE_CENTROIDS
             trace_query_centroid_dists.push_back(coarse.top().first);
-		    trace_centroid_idxs.push_back(coarse.top().second);
+            trace_centroid_idxs.push_back(coarse.top().second);
 #endif
 
             coarse.pop();
@@ -295,13 +295,13 @@ namespace ivfhnsw {
 
     void IndexIVF_HNSW::trace_centroids(size_t idx_q, bool missed)
     {
-    	char *hit_log = "centroids_hit.log";
-    	char *miss_log = "centroids_miss.log";
+        char *hit_log = "centroids_hit.log";
+        char *miss_log = "centroids_miss.log";
         std::ofstream log_trace;
         if (missed)
-        	log_trace.open(miss_log, std::ofstream::out | std::ofstream::app);
+            log_trace.open(miss_log, std::ofstream::out | std::ofstream::app);
         else
-        	log_trace.open(hit_log, std::ofstream::out | std::ofstream::app);
+            log_trace.open(hit_log, std::ofstream::out | std::ofstream::app);
 
         if (!log_trace.is_open()) {
             std::cout << "Failed to open log file for centroids traceing" << std::endl;
@@ -312,8 +312,8 @@ namespace ivfhnsw {
         std::cout << "centroids number " << sz << std::endl;
         if (sz > 0) log_trace << "query " << idx_q << " centroids info\n";
         for (size_t i = 0; i < sz; i++) {
-        	auto centroid_idx = trace_centroid_idxs[i];
-        	log_trace << "centroid ";
+            auto centroid_idx = trace_centroid_idxs[i];
+            log_trace << "centroid ";
             log_trace << centroid_idx;
             log_trace << " with distance ";
             log_trace << trace_query_centroid_dists[i];
@@ -628,10 +628,18 @@ out:
         return rc;
     }
 
-    // Write index 
-    void IndexIVF_HNSW::write(const char *path_index)
+    /*
+     * Write index
+     * do_trunc == true, will truncate file before write
+     */
+    void IndexIVF_HNSW::write(const char *path_index, bool do_trunc)
     {
-        std::ofstream output(path_index, std::ios::binary);
+        std::ofstream output;
+
+        if (do_trunc)
+            output.open(path_index, std::ios::binary | std::ios::trunc);
+        else
+            output.open(path_index, std::ios::binary);
 
         write_variable(output, d);
         write_variable(output, nc);
@@ -650,6 +658,12 @@ out:
 
         // Save centroid norms
         write_vector(output, centroid_norms);
+    }
+
+    // Write index
+    void IndexIVF_HNSW::write(const char *path_index)
+    {
+        this->write(path_index, false);
     }
 
     // Write index

@@ -271,10 +271,10 @@ namespace ivfhnsw
         const float *qsd = query_subcentroid_dists.data();
 
 #ifdef TRACE_NEIGHBOUR
-    	std::vector<float> query_vector_dists;
-    	char *neighbour_log = "neighbour_hit.log";
-    	std::ofstream log_trace;
-    	log_trace.open(neighbour_log, std::ofstream::out | std::ofstream::app);
+        std::vector<float> query_vector_dists;
+        char *neighbour_log = "neighbour_hit.log";
+        std::ofstream log_trace;
+        log_trace.open(neighbour_log, std::ofstream::out | std::ofstream::app);
         if (!log_trace.is_open()) {
             std::cout << "Failed to open log file for neighbour traceing" << std::endl;
         }
@@ -342,7 +342,7 @@ namespace ivfhnsw
             if (log_trace.is_open()) {
                 std::sort(query_vector_dists.begin(), query_vector_dists.end());
                 for (auto it = query_vector_dists.begin(); it < query_vector_dists.end(); it++) {
-                	log_trace << *it << "\n";
+                    log_trace << *it << "\n";
                 }
             }
 #endif
@@ -394,9 +394,14 @@ namespace ivfhnsw
         }
     }
 
-    void IndexIVF_HNSW_Grouping::write(const char *path_index)
+    void IndexIVF_HNSW_Grouping::write(const char *path_index, bool do_trunc)
     {
-        std::ofstream output(path_index, std::ios::binary);
+        std::ofstream output;
+
+        if (do_trunc)
+            output.open(path_index, std::ios::binary | std::ios::trunc);
+        else
+            output.open(path_index, std::ios::binary);
 
         write_variable(output, d);
         write_variable(output, nc);
@@ -431,6 +436,11 @@ namespace ivfhnsw
         // Save inter centroid distances
         for (size_t i = 0; i < nc; i++)
             write_vector(output, inter_centroid_dists[i]);
+    }
+
+    void IndexIVF_HNSW_Grouping::write(const char *path_index)
+    {
+        this->write(path_index, false);
     }
 
     void IndexIVF_HNSW_Grouping::read(const char *path_index)

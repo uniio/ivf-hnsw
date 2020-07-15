@@ -4,12 +4,10 @@
 #include <stdlib.h>
 #include <queue>
 #include <unordered_set>
-#include <algorithm>
 
 #include <ivf-hnsw/IndexIVF_HNSW_Grouping.h>
 #include <ivf-hnsw/Parser.h>
 #include <ivf-hnsw/hnswalg.h>
-#include <ivf-hnsw/utils.h>
 
 using namespace hnswlib;
 using namespace ivfhnsw;
@@ -96,37 +94,31 @@ int main(int argc, char **argv) {
     //====================
     // Precompute indices 
     //====================
-    if (!exists(opt.path_precomputed_idxs)){
-        std::cout << "Precomputing indices" << std::endl;
-        StopW stopw = StopW();
+    // in this test, path_base only stand for directory name
+    std::vector<std::string> base_files;
+	std::vector<std::string> idx_files;
+	get_files(opt.path_base, ".bvecs", base_files);
+	check_files("precomputed_idxs_sift1b_", base_files);
+	get_files(opt.path_base, ".ivecs", idx_files);
+	check_files("bigann_base_", idx_files);
 
-        std::ifstream input(opt.path_base, std::ios::binary);
-        std::ofstream output(opt.path_precomputed_idxs, std::ios::binary);
+	if (base_files.size() != idx_files.size()) {
+		std::cout << "base vector segments not match with index segments" << std::endl;
+		assert(0);
+	}
+	size_t segments_num = base_files.size();
+	size_t segments_idx = 0;
 
-        const uint32_t batch_size = 1000000;
-        const size_t nbatches = opt.nb / batch_size;
-
-        std::vector<float> batch(batch_size * opt.d);
-        std::vector<idx_t> precomputed_idx(batch_size);
-
-        index->quantizer->efSearch = 220;
-        for (size_t i = 0; i < nbatches; i++) {
-            if (i % 10 == 0) {
-                std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
-                          << (100.*i) / nbatches << "%" << std::endl;
-            }
-            readXvecFvec<uint8_t>(input, batch.data(), opt.d, batch_size);
-            index->assign(batch_size, batch.data(), precomputed_idx.data());
-
-            output.write((char *) &batch_size, sizeof(uint32_t));
-            output.write((char *) precomputed_idx.data(), batch_size * sizeof(idx_t));
-        }
+add_loop:
+    if (segments_idx == segments_num) {
+		std::cout << "add vector test finish" << std::endl;
+		goto show_result;
     }
 
     //=====================================
     // Construct IVF-HNSW + Grouping Index 
     //=====================================
-    if (exists(opt.path_index)){
+    if (exists(opt.path_index)) {
         // Load Index 
         std::cout << "Loading index from " << opt.path_index << std::endl;
         index->read(opt.path_index);
@@ -135,8 +127,15 @@ int main(int argc, char **argv) {
         std::cout << "Adding groups to index" << std::endl;
         StopW stopw = StopW();
 
+        auto base_segment = std::string(opt.path_base) + "/" + base_files[segments_idx];
+        auto idx_segment = std::string(opt.path_base) + "/" + idx_files[segments_idx];
+        std::cout << "Load base vector from file: " << base_segment << std::endl;
+        std::cout << "Load index vector from file: " << idx_segment << std::endl;
+
+        size_t vec_count = base_vec_num(base_segment.c_str(), opt.d);
+
         const size_t batch_size = 1000000;
-        const size_t nbatches = opt.nb / batch_size;
+        const size_t nbatches = vec_count / batch_size;
         size_t groups_per_iter = 250000;
 
         std::vector<uint8_t> batch(batch_size * opt.d);
@@ -152,8 +151,8 @@ int main(int argc, char **argv) {
 
             // Iterate through the dataset extracting points from groups,
             // whose ids lie in [ngroups_added, ngroups_added + groups_per_iter)
-            std::ifstream base_input(opt.path_base, std::ios::binary);
-            std::ifstream idx_input(opt.path_precomputed_idxs, std::ios::binary);
+            std::ifstream base_input(base_segment, std::ios::binary);
+            std::ifstream idx_input(idx_segment, std::ios::binary);
 
             for (size_t b = 0; b < nbatches; b++) {
                 readXvec<uint8_t>(base_input, batch.data(), opt.d, batch_size);
@@ -203,7 +202,7 @@ int main(int argc, char **argv) {
 
         // Save index, pq and norm_pq 
         std::cout << "Saving index to " << opt.path_index << std::endl;
-        index->write(opt.path_index);
+        index->write(opt.path_index, true);
     }
     // For correct search using OPQ encoding rotate points in the coarse quantizer
     if (opt.do_opq) {
@@ -233,7 +232,6 @@ int main(int argc, char **argv) {
     size_t correct = 0;
     float distances[opt.k];
     long labels[opt.k];
-    std::vector<SearchInfo_t> searchRet;
 
     StopW stopw = StopW();
     for (size_t i = 0; i < opt.nq; i++) {
@@ -246,73 +244,26 @@ int main(int argc, char **argv) {
             gt.pop();
         }
 
-        bool hdr_loged = false;
         for (size_t j = 0; j < opt.k; j++)
             if (g.count(labels[j]) != 0) {
                 correct++;
-#if 1
-//                if (i == 0)
-                {
-                    auto answer = answers[i];
-                    auto item = answer.top();
-                    std::vector<float> dists(opt.k);
-                    if (!hdr_loged) {
-                        std::cout << "found in query " << i << std::endl;
-                        std::cout << "answer ";
-                        std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
-                        hdr_loged = true;
-                    }
-                    SearchInfo_t sret;
-                    for (int di = opt.k - 1; di >= 0; di--) {
-                        sret.distance = distances[di];
-                        sret.label = labels[di];
-                        searchRet.push_back(sret);
-                    }
-                    std::sort(searchRet.begin(), searchRet.end(), cmp);
-                    for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
-                        auto item = *it;
-                        float realL2dist = getL2Distance(massQ.data() + i*opt.d, opt.path_base, opt.d,
-                                                         item.label, base_vec);
-                        std::cout << "distance " << item.distance;
-                        std::cout << " label " << item.label << std::endl;
-                        std::cout << "real distance " << realL2dist << std::endl;
-                    }
-                	index->trace_centroids(i, false);
-                	exit(0);
-                }
-#endif
                 break;
-            } else {
-#if 0
-            	auto answer = answers[i];
-            	auto item = answer.top();
-        	    std::cout << "not found in query " << i << std::endl;
-        	    std::cout << "answer ";
-        	    std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
-            	SearchInfo_t sret;
-            	for (int di = opt.k - 1; di >= 0; di--) {
-                	sret.distance = distances[di];
-                	sret.label = labels[di];
-                	searchRet.push_back(sret);
-            	}
-            	std::sort(searchRet.begin(), searchRet.end(), cmp);
-            	for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
-            		auto item = *it;
-            		std::cout << "distance " << item.distance;
-                	std::cout << " label " << item.label << std::endl;
-            	}
-#endif
             }
-
-        index->trace_centroids(i, true);
-        exit(0);
     }
+
+show_result:
     //===================
     // Represent results 
     //===================
     const float time_us_per_query = stopw.getElapsedTimeMicro() / opt.nq;
     std::cout << "Recall@" << opt.k << ": " << 1.0f * correct / opt.nq << std::endl;
     std::cout << "Time per query: " << time_us_per_query << " us" << std::endl;
+
+    // try to add next vector segment, add run query again
+    if (segments_idx != segments_num) {
+    	segments_idx++;
+    	goto add_loop;
+    }
 
     delete index;
     return 0;

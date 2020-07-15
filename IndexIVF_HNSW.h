@@ -157,8 +157,11 @@ namespace ivfhnsw {
         */
         virtual void train_pq(size_t n, const float *x);
 
-        /// Write index to the path
-        virtual void write(const char *path);
+        /// Write index to the path_index
+        virtual void write(const char *path_index);
+
+        // similar as write function, except can truncate file before write
+        virtual void write(const char *path_index, bool do_trunc);
 
         // write ORCV format index files
         virtual void write2(const char *home_dir, size_t n_vecs, bool do_opq, const char *path_edge);

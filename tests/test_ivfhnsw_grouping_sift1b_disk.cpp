@@ -4,12 +4,10 @@
 #include <stdlib.h>
 #include <queue>
 #include <unordered_set>
-#include <algorithm>
 
 #include <ivf-hnsw/IndexIVF_HNSW_Grouping.h>
 #include <ivf-hnsw/Parser.h>
 #include <ivf-hnsw/hnswalg.h>
-#include <ivf-hnsw/utils.h>
 
 using namespace hnswlib;
 using namespace ivfhnsw;
@@ -233,11 +231,10 @@ int main(int argc, char **argv) {
     size_t correct = 0;
     float distances[opt.k];
     long labels[opt.k];
-    std::vector<SearchInfo_t> searchRet;
 
     StopW stopw = StopW();
     for (size_t i = 0; i < opt.nq; i++) {
-        index->search(opt.k, massQ.data() + i*opt.d, distances, labels);
+        index->searchDisk(opt.k, massQ.data() + i*opt.d, distances, labels, opt.path_base);
         std::priority_queue<std::pair<float, idx_t >> gt(answers[i]);
         std::unordered_set<idx_t> g;
 
@@ -246,66 +243,11 @@ int main(int argc, char **argv) {
             gt.pop();
         }
 
-        bool hdr_loged = false;
         for (size_t j = 0; j < opt.k; j++)
             if (g.count(labels[j]) != 0) {
                 correct++;
-#if 1
-//                if (i == 0)
-                {
-                    auto answer = answers[i];
-                    auto item = answer.top();
-                    std::vector<float> dists(opt.k);
-                    if (!hdr_loged) {
-                        std::cout << "found in query " << i << std::endl;
-                        std::cout << "answer ";
-                        std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
-                        hdr_loged = true;
-                    }
-                    SearchInfo_t sret;
-                    for (int di = opt.k - 1; di >= 0; di--) {
-                        sret.distance = distances[di];
-                        sret.label = labels[di];
-                        searchRet.push_back(sret);
-                    }
-                    std::sort(searchRet.begin(), searchRet.end(), cmp);
-                    for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
-                        auto item = *it;
-                        float realL2dist = getL2Distance(massQ.data() + i*opt.d, opt.path_base, opt.d,
-                                                         item.label, base_vec);
-                        std::cout << "distance " << item.distance;
-                        std::cout << " label " << item.label << std::endl;
-                        std::cout << "real distance " << realL2dist << std::endl;
-                    }
-                	index->trace_centroids(i, false);
-                	exit(0);
-                }
-#endif
                 break;
-            } else {
-#if 0
-            	auto answer = answers[i];
-            	auto item = answer.top();
-        	    std::cout << "not found in query " << i << std::endl;
-        	    std::cout << "answer ";
-        	    std::cout << "[" << item.first << ", " << item.second  << "]" << std::endl;
-            	SearchInfo_t sret;
-            	for (int di = opt.k - 1; di >= 0; di--) {
-                	sret.distance = distances[di];
-                	sret.label = labels[di];
-                	searchRet.push_back(sret);
-            	}
-            	std::sort(searchRet.begin(), searchRet.end(), cmp);
-            	for (auto it = searchRet.begin(); it < searchRet.end(); it++) {
-            		auto item = *it;
-            		std::cout << "distance " << item.distance;
-                	std::cout << " label " << item.label << std::endl;
-            	}
-#endif
             }
-
-        index->trace_centroids(i, true);
-        exit(0);
     }
     //===================
     // Represent results 

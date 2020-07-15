@@ -153,5 +153,10 @@ namespace ivfhnsw {
                         const long vec_id, vec_t type_v);
 
     bool cmp(SearchInfo_t a, SearchInfo_t b);
+
+    size_t base_vec_num(const char *path_base, size_t vec_dim);
+
+    void get_files(const char *path_dir, const char *file_ext, std::vector<std::string> &file_list);
+    void check_files(const char *file_prefix, std::vector<std::string> &file_list);
 }
 #endif //IVF_HNSW_LIB_UTILS_H

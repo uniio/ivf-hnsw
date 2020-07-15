@@ -42,6 +42,9 @@ namespace ivfhnsw{
         void write(const char *path_index);
         void read(const char *path_index);
 
+        // similar as write function, except can truncate file before write
+        void write(const char *path_index, bool do_trunc);
+
         void train_pq(size_t n, const float *x);
 
         /// Compute distances between the group centroid and its <subc> nearest neighbors in the HNSW graph

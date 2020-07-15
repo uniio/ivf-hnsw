@@ -1,3 +1,8 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <assert.h>
+#include <dirent.h>
 
 #include "utils.h"
 
@@ -194,4 +199,73 @@ namespace ivfhnsw {
             return true;
         }
     }
+
+    size_t base_vec_num(const char *path_base, size_t vec_dim) {
+        struct stat st;
+        int rc = stat(path_base, &st);
+        if (rc) return 0;
+
+        size_t rec_size = sizeof(uint32_t) + vec_dim * sizeof(uint8_t);
+        size_t rec_num = st.st_size/rec_size;
+
+        // verify file size, must be multiple of vector record size
+        if (st.st_size != rec_size * rec_num) {
+            std::cout << "Invalid size of file: " << path_base << std::endl;
+            // need investigate, force core dump
+            assert(0);
+        }
+
+        return rec_num;
+    }
+
+    static bool is_ext_match(char *file_nm, const char *file_ext) {
+        char *ptr = strstr(file_nm, file_ext);
+        char extend_nm[32];
+
+        // file extend name not match
+        if (ptr == NULL) return false;
+
+        // skip file, which name same as extend name
+        if (strlen(file_nm) == strlen(file_ext)) return false;
+
+        // get file extend name
+        size_t len_ext = strlen(file_ext);
+        strncpy(extend_nm, ptr, len_ext);
+
+        // make sure extend name same as given
+        if (strcmp(extend_nm, file_ext) == 0)
+            return true;
+        else
+            return false;
+    }
+
+    void get_files(const char *path_dir, const char *file_ext, std::vector<std::string> &file_list) {
+        DIR *dir;
+        struct dirent *ptr;
+
+        dir = opendir(path_dir);
+        if (dir == NULL) {
+            std::cout << "Failed to open dir: " << path_dir << std::endl;
+            return;
+        }
+        while((ptr = readdir(dir)) != NULL)
+        {
+            if (is_ext_match(ptr->d_name, file_ext) == false) continue;
+
+            file_list.push_back(ptr->d_name);
+        }
+
+        closedir(dir);
+    }
+
+    void check_files(const char *file_prefix, std::vector<std::string> &file_list) {
+        auto sz = file_list.size();
+        for (size_t i = 0; i < sz; i++) {
+            const char *sfile = file_list[i].c_str();
+            const char *ptr = strstr(sfile, file_prefix);
+            if (ptr == NULL) assert(0);
+            if (ptr != sfile) assert(0);
+        }
+    }
+
 }

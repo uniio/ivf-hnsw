@@ -112,7 +112,8 @@ int main(int argc, char **argv) {
 add_loop:
     if (segments_idx == segments_num) {
 		std::cout << "add vector test finish" << std::endl;
-		goto show_result;
+		delete index;
+		return 0;
     }
 
     //=====================================
@@ -251,7 +252,6 @@ add_loop:
             }
     }
 
-show_result:
     //===================
     // Represent results 
     //===================

@@ -59,7 +59,7 @@ pruning="on"          # Turn on/off pruning
 path_data="${PWD}/data/SIFT1B"
 path_model="${PWD}/models/SIFT1B"
 
-path_base="${path_data}/bsplit_10"
+path_base="${path_data}/split_100"
 path_learn="${path_data}/bigann_learn.bvecs"
 path_gt="${path_data}/gnd/idx_1000M.ivecs"
 path_q="${path_data}/bigann_query.bvecs"
@@ -72,7 +72,7 @@ path_pq="${path_model}/pq${code_size}_nsubc${nsubc}.opq"
 path_norm_pq="${path_model}/norm_pq${code_size}_nsubc${nsubc}.opq"
 path_opq_matrix="${path_model}/matrix_pq${code_size}_nsubc${nsubc}.opq"
 
-path_index="${path_model}/ivfhnsw_OPQ${code_size}_nsubc${nsubc}.index"
+path_index="${path_model}/ivfhnsw_OPQ${code_size}_nsubc${nsubc}"
 
 #######
 # Run #

@@ -96,33 +96,35 @@ int main(int argc, char **argv) {
     //====================
     // in this test, path_base only stand for directory name
     std::vector<std::string> base_files;
-	std::vector<std::string> idx_files;
-	get_files(opt.path_base, ".bvecs", base_files);
-	check_files("precomputed_idxs_sift1b_", base_files);
-	get_files(opt.path_base, ".ivecs", idx_files);
-	check_files("bigann_base_", idx_files);
+    std::vector<std::string> idx_files;
+    get_files(opt.path_base, ".bvecs", base_files);
+    check_files("precomputed_idxs_sift1b_", base_files);
+    get_files(opt.path_base, ".ivecs", idx_files);
+    check_files("bigann_base_", idx_files);
 
-	if (base_files.size() != idx_files.size()) {
-		std::cout << "base vector segments not match with index segments" << std::endl;
-		assert(0);
-	}
-	size_t segments_num = base_files.size();
-	size_t segments_idx = 0;
+    if (base_files.size() != idx_files.size()) {
+        std::cout << "base vector segments not match with index segments" << std::endl;
+        assert(0);
+    }
+    size_t segments_num = base_files.size();
+    size_t segments_idx = 0;
+    char  index_nm[1024];
 
 add_loop:
     if (segments_idx == segments_num) {
-		std::cout << "add vector test finish" << std::endl;
-		delete index;
-		return 0;
+        std::cout << "add vector test finish" << std::endl;
+        delete index;
+        return 0;
     }
+    get_index_name(opt.path_index, segments_idx, index_nm);
 
     //=====================================
-    // Construct IVF-HNSW + Grouping Index 
+    // Construct IVF-HNSW + Grouping Index
     //=====================================
-    if (exists(opt.path_index)) {
-        // Load Index 
-        std::cout << "Loading index from " << opt.path_index << std::endl;
-        index->read(opt.path_index);
+    if (exists(index_nm)) {
+        // Load Index
+        std::cout << "Loading index from " << index_nm << std::endl;
+        index->read(index_nm);
     } else {
         // Adding groups to index 
         std::cout << "Adding groups to index" << std::endl;
@@ -134,6 +136,7 @@ add_loop:
         std::cout << "Load index vector from file: " << idx_segment << std::endl;
 
         size_t vec_count = base_vec_num(base_segment.c_str(), opt.d);
+        std::cout << "vector count " << vec_count << " in the loop" << std::endl;
 
         const size_t batch_size = 1000000;
         const size_t nbatches = vec_count / batch_size;
@@ -160,6 +163,8 @@ add_loop:
                 readXvec<idx_t>(idx_input, idx_batch.data(), batch_size, 1);
 
                 for (size_t i = 0; i < batch_size; i++) {
+                    // only process index which lies in
+                    // [ngroups_added, ngroups_added + groups_per_iter)
                     if (idx_batch[i] < ngroups_added ||
                         idx_batch[i] >= ngroups_added + groups_per_iter)
                         continue;
@@ -170,6 +175,8 @@ add_loop:
                     ids[idx].push_back(b * batch_size + i);
                 }
             }
+            base_input.close();
+            idx_input.close();
 
             // If <opt.nc> is not a multiple of groups_per_iter, change <groups_per_iter> on the last iteration
             if (opt.nc - ngroups_added <= groups_per_iter)
@@ -182,7 +189,8 @@ add_loop:
                 {
                     if (j % 10000 == 0) {
                         std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
-                                  << (100. * (ngroups_added + j)) / opt.nc << "%" << std::endl;
+                                  << (100. * (ngroups_added + j)) / opt.nc
+                                  << "%" << std::endl;
                     }
                     j++;
                 }
@@ -203,7 +211,7 @@ add_loop:
 
         // Save index, pq and norm_pq 
         std::cout << "Saving index to " << opt.path_index << std::endl;
-        index->write(opt.path_index, true);
+        index->write(index_nm, true);
     }
     // For correct search using OPQ encoding rotate points in the coarse quantizer
     if (opt.do_opq) {
@@ -261,8 +269,8 @@ add_loop:
 
     // try to add next vector segment, add run query again
     if (segments_idx != segments_num) {
-    	segments_idx++;
-    	goto add_loop;
+        segments_idx++;
+        goto add_loop;
     }
 
     delete index;

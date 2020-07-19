@@ -158,5 +158,6 @@ namespace ivfhnsw {
 
     void get_files(const char *path_dir, const char *file_ext, std::vector<std::string> &file_list);
     void check_files(const char *file_prefix, std::vector<std::string> &file_list);
+    void get_index_name(const char *path_idx, size_t idx, char *idx_name);
 }
 #endif //IVF_HNSW_LIB_UTILS_H

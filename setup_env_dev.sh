@@ -7,31 +7,7 @@ if [ ! -d "/usr/include/" ]; then
 	exit 1
 fi
 
-if [ "$(expr substr $(uname -s) 1 5)" = "Linux" ]; then
-    # when the following lib files are ready, we think build ivf-hnsw done
-    if [ ! -f ${PWD}/lib/libfaiss.a ]; then
-        echo ivf-hnsw not build yet, build it first
-        exit 1
-    fi
-
-    if [ ! -f ${PWD}/lib/libhnswlib.a ]; then
-        echo ivf-hnsw not build yet, build it first
-        exit 1
-    fi
-
-    if [ ! -f ${PWD}/lib/libivf-hnsw.a ]; then
-        echo ivf-hnsw not build yet, build it first
-        exit 1
-    fi
-
-    # following is not related with run program, it's used for build program which will use ivf-hnsw
-    # as if ldconfig not use symbol link, must copy files
-    eval $RUN_SUDO cp -f ${PWD}/lib/libfaiss.a /usr/local/lib/libfaiss.a
-    eval $RUN_SUDO cp -f ${PWD}/lib/libhnswlib.a /usr/local/lib/libhnswlib.a
-    eval $RUN_SUDO cp -f ${PWD}/lib/libivf-hnsw.a /usr/local/lib/libivf-hnsw.a
-
-    eval $RUN_SUDO ldconfig
-else
+if [ "$(expr substr $(uname -s) 1 5)" != "Linux" ]; then
     unset RUN_SUDO
 fi
 
@@ -68,6 +44,32 @@ if [ -L ${PWD}/hnswalg.h ] ; then
     ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
 else
     ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
+fi
+
+if [ "$(expr substr $(uname -s) 1 5)" = "Linux" ]; then
+    # when the following lib files are ready, we think build ivf-hnsw done
+    if [ ! -f ${PWD}/lib/libfaiss.a ]; then
+        echo ivf-hnsw not build yet, build it and run this script again
+        exit 1
+    fi
+
+    if [ ! -f ${PWD}/lib/libhnswlib.a ]; then
+        echo ivf-hnsw not build yet, build it and run this script again
+        exit 1
+    fi
+
+    if [ ! -f ${PWD}/lib/libivf-hnsw.a ]; then
+        echo ivf-hnsw not build yet, build it and run this script again
+        exit 1
+    fi
+
+    # following is not related with run program, it's used for build program which will use ivf-hnsw
+    # as if ldconfig not use symbol link, must copy files
+    eval $RUN_SUDO cp -f ${PWD}/lib/libfaiss.a /usr/local/lib/libfaiss.a
+    eval $RUN_SUDO cp -f ${PWD}/lib/libhnswlib.a /usr/local/lib/libhnswlib.a
+    eval $RUN_SUDO cp -f ${PWD}/lib/libivf-hnsw.a /usr/local/lib/libivf-hnsw.a
+
+    eval $RUN_SUDO ldconfig
 fi
 
 echo "success setup develop environment"

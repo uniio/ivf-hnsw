@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -254,6 +255,7 @@ namespace ivfhnsw {
 
             file_list.push_back(ptr->d_name);
         }
+        std::sort(file_list.begin(), file_list.end());
 
         closedir(dir);
     }
@@ -266,6 +268,10 @@ namespace ivfhnsw {
             if (ptr == NULL) assert(0);
             if (ptr != sfile) assert(0);
         }
+    }
+
+    void get_index_name(const char *path_idx, size_t idx, char *idx_name) {
+    	sprintf(idx_name, "%s_%02lu%s", path_idx, idx, ".index");
     }
 
 }

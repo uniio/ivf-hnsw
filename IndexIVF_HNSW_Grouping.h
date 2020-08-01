@@ -3,11 +3,45 @@
 
 #include "IndexIVF_HNSW.h"
 
-namespace ivfhnsw{
+namespace ivfhnsw {
+// used for info tracing
+#define TRACE_CENTROIDS
+
+class Index_DB {
+private:
+    typedef uint32_t idx_t;
+	char conninfo[512];
+    PGconn *conn = nullptr;
+public:
+    explicit Index_DB(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
+	virtual ~Index_DB();
+
+	int Connect();
+	int CreateIndexTables(size_t batch_idx);
+	void DropIndexTables(size_t batch_idx);
+	int CreateBaseTables(size_t batch_idx);
+	int DropBaseTable(size_t batch_idx, bool drop_older = false);
+	int CreatePrecomputedIndexTables(size_t batch_idx);
+	int DropPrecomputedIndexTable(size_t batch_idx, bool drop_older = false);
+	int CreateServiceTable();
+	int DropServiceTables();
+	int WriteIndexMeta(size_t dim, size_t nc, size_t nsubc);
+	int LoadIndexMeta(size_t &dim, size_t &nc, size_t &nsubc);
+	int LoadIndex(size_t batch_idx);
+	template<typename T>
+	int ReadVectors(char *table_nm, size_t num_centroids, std::vector<std::vector<idx_t>> &dvec);
+	template<typename T>
+	int WriteVector(char *table_nm, std::vector<T> &ivec);
+	int UpdateIndex(size_t batch_idx);
+private:
+	int GetLatestBatch(size_t &batch_idx);
+	int CreateTable(char *cmd_str);
+	int UpdateMeta(size_t batch_idx);
+	int DropTable(char *tbl_nm);
+};
     // util function for centriod trace
     extern int centriodTraceSetup();
     extern void centriodTraceClose();
-
 
     //=======================================
     // IVF_HNSW + Grouping( + Pruning) index
@@ -20,6 +54,8 @@ namespace ivfhnsw{
         std::vector<std::vector<idx_t> > nn_centroid_idxs;    ///< Indices of the <nsubc> nearest centroids for each centroid
         std::vector<std::vector<idx_t> > subgroup_sizes;      ///< Sizes of sub-groups for each group
         std::vector<float> alphas;    ///< Coefficients that determine the location of sub-centroids
+
+        Index_DB *db_p;
 
     public:
         IndexIVF_HNSW_Grouping(size_t dim, size_t ncentroids, size_t bytes_per_code,
@@ -44,6 +80,18 @@ namespace ivfhnsw{
 
         // similar as write function, except can truncate file before write
         void write(const char *path_index, bool do_trunc);
+
+        // setup database related things
+        int setup_db(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
+
+        // save index into db tables
+        int write_db_index(size_t batch_idx);
+
+        // prepare db and database tables for the batch of index
+        int prepare_db(size_t batch_idx);
+
+        // commit batch index status
+        int commit_db_index(size_t batch_idx);
 
         void train_pq(size_t n, const float *x);
 

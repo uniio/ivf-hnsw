@@ -16,9 +16,7 @@
 #include <hnswlib/hnswalg.h>
 #include "utils.h"
 #include "orcv.h"
-
-// used for info tracing
-#define TRACE_CENTROIDS
+#include "IndexIVF_DB.h"
 
 namespace ivfhnsw {
     /** Index based on a inverted file (IVF) with Product Quantizer encoding.
@@ -89,7 +87,6 @@ namespace ivfhnsw {
         // match search and nearly search parameter
         float dmatch = 4444.0;
         float dnear = 8888.0;
-
     public:
         explicit IndexIVF_HNSW(size_t dim, size_t ncentroids, size_t bytes_per_code,
                                size_t nbits_per_idx, size_t max_group_size = 65536);

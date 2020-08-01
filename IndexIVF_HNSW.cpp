@@ -1,7 +1,6 @@
 #include "IndexIVF_HNSW.h"
 
 namespace ivfhnsw {
-
     //=========================
     // IVF_HNSW implementation 
     //=========================

@@ -47,6 +47,12 @@ else
 fi
 
 if [ "$(expr substr $(uname -s) 1 5)" = "Linux" ]; then
+    # make sure libpq-dev package installed, otherwise it will lead build failed
+    dpkg -s libpq-dev
+    if [  $? -ne 0 ];then
+        echo "libpq-dev not installed, please install it before build"
+    fi
+
     # when the following lib files are ready, we think build ivf-hnsw done
     if [ ! -f ${PWD}/lib/libfaiss.a ]; then
         echo ivf-hnsw not build yet, build it and run this script again

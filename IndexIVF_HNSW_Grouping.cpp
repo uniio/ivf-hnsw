@@ -29,7 +29,8 @@ using std::cout;
 using std::endl;
 
 Index_DB::Index_DB(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr) {
-    sprintf(conninfo, "hostaddr=%s port=%u port=%s user=%s user=%s");
+    sprintf(conninfo, "host=%s port=%u dbname=%s user=%s password=%s",
+            host, port, db_nm, db_usr, pwd_usr);
 }
 
 Index_DB::~Index_DB() {
@@ -52,10 +53,11 @@ int Index_DB::Connect() {
 
 
 
-int Index_DB::CreateTable(char *cmd_str) {
+int Index_DB::CreateTable(const char *cmd_str, const char *table_nm) {
 	PGresult   *res;
 	int rc = 0;
 
+	cout << "Execute command: " << cmd_str << endl;
     res = PQexecParams(conn,
                        cmd_str,
                        0,
@@ -65,9 +67,10 @@ int Index_DB::CreateTable(char *cmd_str) {
                        NULL,
                        1);
 
-    if (PQresultStatus(res) != PGRES_TUPLES_OK)
+    if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
-    	cout << "Failed to create table: " << PQerrorMessage(conn) << endl;
+    	cout << "Failed to create table: " << table_nm << endl;
+    	cout << PQerrorMessage(conn) << endl;
     	rc = -1;
     }
     PQclear(res);
@@ -85,7 +88,7 @@ int Index_DB::CreateBaseTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, id bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
 }
@@ -100,7 +103,7 @@ int Index_DB::CreatePrecomputedIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, id bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
 }
@@ -115,7 +118,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, id bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
     // create PQ codec table
@@ -123,7 +126,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, codes bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
     // create norm PQ codec table
@@ -131,7 +134,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, norm_codes bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
     // create NN centriods index table
@@ -139,7 +142,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, nn_centroid_idxs bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
     // create group size table
@@ -147,7 +150,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, subgroup_sizes bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
     // create inter centroid distances table
@@ -155,7 +158,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (dim INTEGER, inter_centroid_dists bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 
     // create msic table for alphas and centroid_norms
@@ -163,7 +166,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
 	sprintf(sql_str,
 			"CREATE TABLE %s (size INTEGER, misc_data bytea)",
 			tbl_nm);
-	rc = CreateTable(sql_str);
+	rc = CreateTable(sql_str, tbl_nm);
 	if (rc) return rc;
 }
 
@@ -239,6 +242,10 @@ void Index_DB::DropIndexTables(size_t batch_idx) {
 	char tbl_nm[128];
 	int rc = -1;
 
+    // drop index vector table
+    sprintf(tbl_nm, "index_vector_%lu", batch_idx);
+    DropTable(tbl_nm);
+
     // drop PQ codec table
     sprintf(tbl_nm, "pq_codec_%lu", batch_idx);
 	DropTable(tbl_nm);
@@ -273,10 +280,10 @@ int Index_DB::CreateServiceTable() {
 	int rc = 0;
 	PGresult *res;
 
-	rc = CreateTable("CREATE TABLE IF NOT EXISTS system (batch_idx INTEGER NOT NULL)");
+	rc = CreateTable("CREATE TABLE IF NOT EXISTS system (batch_idx INTEGER NOT NULL)", "system");
 	if (rc) goto out;
 
-	rc = CreateTable("CREATE TABLE IF NOT EXISTS index_meta (dim INTEGER, nc INTEGER, nsubc INTEGER)");
+	rc = CreateTable("CREATE TABLE IF NOT EXISTS index_meta (dim INTEGER, nc INTEGER, nsubc INTEGER)", "index_meta");
 out:
 	return rc;
 }
@@ -908,9 +915,11 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
 	int IndexIVF_HNSW_Grouping::prepare_db(size_t batch_idx)
     {
 		if (db_p == nullptr) {
+		    std::cout << "Connect to servicedb ..." << std::endl;
 			int rc = setup_db("localhost", 5432, "servicedb", "postgres", "postgres");
 			if (rc) return rc;
 		}
+		std::cout << "Prepare tables in servicedb for batch index: " << batch_idx << std::endl;
         db_p->DropIndexTables(batch_idx);
 		return db_p->CreateIndexTables(batch_idx);
     }
@@ -928,7 +937,7 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
         // Save vector indices
     	sprintf(table_nm, "index_vector_%lu", batch_idx);
         for (size_t i = 0; i < nc; i++) {
-        	rc = db_p->SaveVector(table_nm, ids[i]);
+        	rc = db_p->WriteVector(table_nm, ids[i]);
         	if (rc) {
         		std::cout << "Failed to save index vector" << std::endl;
         		return rc;
@@ -938,7 +947,7 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
         // Save PQ codes
     	sprintf(table_nm, "pq_codec_%lu", batch_idx);
         for (size_t i = 0; i < nc; i++) {
-        	rc = db_p->SaveVector(table_nm, codes[i]);
+        	rc = db_p->WriteVector(table_nm, codes[i]);
         	if (rc) {
         		std::cout << "Failed to save PQ codes" << std::endl;
         		return rc;
@@ -948,7 +957,7 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
         // Save norm PQ codes
     	sprintf(table_nm, "norm_codec_%lu", batch_idx);
         for (size_t i = 0; i < nc; i++) {
-        	rc = db_p->SaveVector(table_nm, norm_codes[i]);
+        	rc = db_p->WriteVector(table_nm, norm_codes[i]);
         	if (rc) {
         		std::cout << "Failed to save norm PQ codes" << std::endl;
         		return rc;
@@ -958,7 +967,7 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
         // Save NN centroid indices
     	sprintf(table_nm, "nn_centroid_idxs_%lu", batch_idx);
         for (size_t i = 0; i < nc; i++) {
-        	rc = db_p->SaveVector(table_nm, nn_centroid_idxs[i]);
+        	rc = db_p->WriteVector(table_nm, nn_centroid_idxs[i]);
         	if (rc) {
         		std::cout << "Failed to save NN centroid indices" << std::endl;
         		return rc;
@@ -968,7 +977,7 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
         // Save group sizes
     	sprintf(table_nm, "subgroup_sizes_%lu", batch_idx);
         for (size_t i = 0; i < nc; i++) {
-        	rc = db_p->SaveVector(table_nm, subgroup_sizes[i]);
+        	rc = db_p->WriteVector(table_nm, subgroup_sizes[i]);
         	if (rc) {
         		std::cout << "Failed to save group sizes" << std::endl;
         		return rc;
@@ -978,7 +987,7 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
         // Save inter centroid distances
     	sprintf(table_nm, "inter_centroid_dists_%lu", batch_idx);
         for (size_t i = 0; i < nc; i++) {
-        	rc = db_p->SaveVector(table_nm, inter_centroid_dists[i]);
+        	rc = db_p->WriteVector(table_nm, inter_centroid_dists[i]);
         	if (rc) {
         		std::cout << "Failed to save inter centroid distances" << std::endl;
         		return rc;
@@ -987,12 +996,12 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
 
         // Save alphas and centroid norms
         sprintf(table_nm, "misc_%lu", batch_idx);
-    	rc = db_p->SaveVector(table_nm, alphas);
+    	rc = db_p->WriteVector(table_nm, alphas);
     	if (rc) {
     		std::cout << "Failed to save alphas" << std::endl;
     		return rc;
     	}
-    	rc = db_p->SaveVector(table_nm, centroid_norms);
+    	rc = db_p->WriteVector(table_nm, centroid_norms);
     	if (rc) {
     		std::cout << "Failed to save centroid norms" << std::endl;
     		return rc;

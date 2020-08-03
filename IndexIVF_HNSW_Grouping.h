@@ -35,7 +35,7 @@ public:
 	int UpdateIndex(size_t batch_idx);
 private:
 	int GetLatestBatch(size_t &batch_idx);
-	int CreateTable(char *cmd_str);
+	int CreateTable(const char *cmd_str, const char *table_nm);
 	int UpdateMeta(size_t batch_idx);
 	int DropTable(char *tbl_nm);
 };
@@ -55,7 +55,7 @@ private:
         std::vector<std::vector<idx_t> > subgroup_sizes;      ///< Sizes of sub-groups for each group
         std::vector<float> alphas;    ///< Coefficients that determine the location of sub-centroids
 
-        Index_DB *db_p;
+        Index_DB *db_p = nullptr;
 
     public:
         IndexIVF_HNSW_Grouping(size_t dim, size_t ncentroids, size_t bytes_per_code,

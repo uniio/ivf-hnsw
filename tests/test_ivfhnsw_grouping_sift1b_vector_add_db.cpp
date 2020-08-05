@@ -211,20 +211,21 @@ add_loop:
         index->compute_inter_centroid_dists();
 
         // Save index, pq and norm_pq 
-        std::cout << "Saving index to " << opt.path_index << std::endl;
-        if (index->prepare_db(segments_idx)) {
-        	std::cout << "Failed to prepare database tables for index table" << std::endl;
-        	exit(-1);
+        index->write(index_nm, true);
+
+        std::cout << "Saving index to " << index_nm<< std::endl;
+        if (index->prepare_db()) {
+            std::cout << "Failed to prepare database" << std::endl;
+            exit(-1);
         }
-        if (index->write_db_index(segments_idx)) {
-        	std::cout << "Failed to write index table" << std::endl;
-        	exit(-1);
-        }
+//        if (index->write_db_index(segments_idx)) {
+//            std::cout << "Failed to write index table" << std::endl;
+//            exit(-1);
+//        }
         if (index->commit_db_index(segments_idx)) {
-        	std::cout << "Failed to write index table" << std::endl;
-        	exit(-1);
+            std::cout << "Failed to write index table" << std::endl;
+            exit(-1);
         }
-//        index->write(index_nm, true);
     }
     // For correct search using OPQ encoding rotate points in the coarse quantizer
     if (opt.do_opq) {

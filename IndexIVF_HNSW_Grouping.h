@@ -7,40 +7,6 @@ namespace ivfhnsw {
 // used for info tracing
 #define TRACE_CENTROIDS
 
-class Index_DB {
-private:
-    typedef uint32_t idx_t;
-    char conninfo[512];
-    PGconn *conn = nullptr;
-public:
-    explicit Index_DB(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
-    virtual ~Index_DB();
-
-    int Connect();
-    int CreateIndexTables(size_t batch_idx);
-    void DropIndexTables(size_t batch_idx);
-    int CreateBaseTables(size_t batch_idx);
-    int DropBaseTable(size_t batch_idx, bool drop_older = false);
-    int CreatePrecomputedIndexTables(size_t batch_idx);
-    int DropPrecomputedIndexTable(size_t batch_idx, bool drop_older = false);
-    int WriteIndexMeta(size_t dim, size_t nc, size_t nsubc);
-    int LoadIndexMeta(size_t &dim, size_t &nc, size_t &nsubc);
-    int LoadIndex(size_t batch_idx);
-    template<typename T>
-    int ReadVectors(char *table_nm, size_t num_centroids, std::vector<std::vector<idx_t>> &dvec);
-    template<typename T>
-    int WriteVector(char *table_nm, char *col0, char *col1, std::vector<T> &ivec);
-    template<typename T>
-    int WriteBaseVector(char *table_nm, size_t vec_id, std::vector<T> &ivec);
-    int UpdateIndex(size_t batch_idx);
-    int GetBaseId(size_t &id_base);
-    int UpdateBaseId(size_t id_base, bool init_stage);
-private:
-    int GetLatestBatch(size_t &batch_idx);
-    int CreateTable(const char *cmd_str, const char *table_nm);
-    int UpdateMeta(size_t batch_idx);
-    int DropTable(char *tbl_nm);
-};
     // util function for centriod trace
     extern int centriodTraceSetup();
     extern void centriodTraceClose();
@@ -77,11 +43,11 @@ private:
         // apply disk search based on ANN search result
         void searchDisk(size_t k, const float *query, float *distances, long *labels, const char *path_base);
 
-        void write(const char *path_index);
-        void read(const char *path_index);
+        int write(const char *path_index);
+        int read(const char *path_index);
 
         // similar as write function, except can truncate file before write
-        void write(const char *path_index, bool do_trunc);
+        int write(const char *path_index, bool do_trunc);
 
         // setup database related things
         int setup_db(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
@@ -99,6 +65,8 @@ private:
 
         // prepare db and database tables for the batch of index
         int prepare_db(size_t batch_idx);
+
+        int prepare_db();
 
         // commit batch index status
         int commit_db_index(size_t batch_idx);

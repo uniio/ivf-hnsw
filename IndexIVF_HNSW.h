@@ -155,16 +155,16 @@ namespace ivfhnsw {
         virtual void train_pq(size_t n, const float *x);
 
         /// Write index to the path_index
-        virtual void write(const char *path_index);
+        virtual int write(const char *path_index);
 
         // similar as write function, except can truncate file before write
-        virtual void write(const char *path_index, bool do_trunc);
+        virtual int write(const char *path_index, bool do_trunc);
 
         // write ORCV format index files
-        virtual void write2(const char *home_dir, size_t n_vecs, bool do_opq, const char *path_edge);
+        virtual int write2(const char *home_dir, size_t n_vecs, bool do_opq, const char *path_edge);
 
         /// Read index from the path
-        virtual void read(const char *path);
+        virtual int read(const char *path);
 
         /// Compute norms of the HNSW vertices
         void compute_centroid_norms();

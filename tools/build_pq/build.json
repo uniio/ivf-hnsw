@@ -1,0 +1,14 @@
+{
+    "path_centroids" : "data/centroids_sift1b.fvecs",
+    "path_learn" : "data/bigann_learn.bvecs",
+    "path_model" : "model",
+    "efConstruction" : "500",
+    "code_size" : "16",
+    "nc" : "993127",
+    "nsubc" : "64",
+    "do_opq" : "true",
+    "ver" : "1",
+    "d" : "128",
+    "M" : "16",
+    "ratio_train" : "0.0262144"
+}

@@ -1,4 +1,7 @@
+#include <fstream>
+#include <fstream>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "IndexIVF_HNSW.h"
 
 namespace ivfhnsw {
@@ -590,44 +593,6 @@ namespace ivfhnsw {
         printf("Training %zdx%zd product quantizer on %ld vectors in %dD\n", norm_pq->M, norm_pq->ksub, n, d);
         norm_pq->verbose = true;
         norm_pq->train(n, norms.data());
-    }
-
-    int IndexIVF_HNSW::copy_file(const char *file_src, const char *file_dst)
-    {
-        int rc = -1;
-        char    buf[4096];
-        FILE    *fp_r = fopen(file_src, "r");
-        FILE    *fp_w = fopen(file_dst, "w");
-
-        if (fp_r == NULL) {
-            std::cout << "Failed to open file: " << file_src << std::endl;
-            goto out;
-        }
-        if (fp_w == NULL) {
-            std::cout << "Failed to open file: " << file_dst << std::endl;
-            goto out;
-        }
-
-        while (!feof(fp_r)) {
-            size_t bytes = fread(buf, 1, sizeof(buf), fp_r);
-            if (ferror(fp_r)) {
-                std::cout << "Failed to read file: " << file_src << std::endl;
-                goto out;
-            }
-            if (bytes) {
-                if (bytes != fwrite(buf, 1, bytes, fp_w)) {
-                    std::cout << "Failed to write file: " << file_dst << std::endl;
-                    goto out;
-                }
-            }
-        }
-        rc = 0;
-
-out:
-        if (fp_r) fclose(fp_r);
-        if (fp_w) fclose(fp_w);
-
-        return rc;
     }
 
     /*

@@ -78,9 +78,6 @@ namespace ivfhnsw {
         std::vector<float> norms;           ///< L2 square norms of reconstructed base vectors
         std::vector<float> centroid_norms;  ///< L2 square norms of coarse centroids
 
-        /// clone file_src in new file named file_dst
-        int copy_file(const char *file_src, const char *file_dst);
-
         // Min number of edges per point
         size_t M;
 

@@ -908,4 +908,101 @@ namespace ivfhnsw
         }
         return (group_denominator > 0) ? group_numerator / group_denominator : 0.0;
     }
+
+    int IndexIVF_HNSW_Grouping::build_pq_files(const char *path_learn, const char *path_out, size_t pq_ver,
+                                      bool with_opq, size_t code_size, double rsubt, size_t nsubc)
+    {
+        int rc = 0;
+        char path_full[1024];
+        char path_ver[1024];
+
+        // Prepare output directory for store PQ files
+        sprintf(path_ver, "%s/%lu", path_out, pq_ver);
+        if (mkdir_p(path_ver, 0755)) {
+            std::cout << "Failed to create directory: " << path_ver << std::endl;
+            return rc;
+        }
+
+        std::cout << "Build PQ files based on learning set file: " << path_learn << std::endl;
+        try {
+            uint32_t dim;
+            size_t nvecs;
+            rc = get_vec_attr(path_learn, dim, nvecs);
+            if (rc) return rc;
+
+            std::cout << "Get train vector subset ..." << std::endl;
+            StopW stopw = StopW();
+            std::vector<float> trainvecs(nvecs * dim);
+            {
+                 std::ifstream learn_input(path_learn, std::ios::binary);
+                 readXvecFvec<uint8_t>(learn_input, trainvecs.data(), dim, nvecs);
+            }
+
+            // Set Random Subset of sub_nt trainvecs
+            size_t nsubt = nvecs * rsubt;
+            std::vector<float> trainvecs_rnd_subset(nsubt * dim);
+            random_subset(trainvecs.data(), trainvecs_rnd_subset.data(), dim, nvecs, nsubt);
+
+            std::cout << "Done with " << (stopw.getElapsedTimeMicro() / 1000000.0) << "s" << std::endl;
+
+            stopw.reset();
+            std::cout << "Training PQ codebooks ..." << std::endl;
+            train_pq(nvecs, trainvecs_rnd_subset.data());
+            std::cout << "Done with " << (stopw.getElapsedTimeMicro() / 1000000.0) << "s" << std::endl;
+
+            sprintf(path_full, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+            std::cout << "Saving Residual PQ codebook to " << path_full << std::endl;
+            faiss::write_ProductQuantizer(pq, path_full);
+
+            sprintf(path_full, "%s/norm_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+            std::cout << "Saving Norm PQ codebook to " << path_full<< std::endl;
+            faiss::write_ProductQuantizer(norm_pq, path_full);
+
+            if (with_opq) {
+                sprintf(path_full, "%s/matrix_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+                std::cout << "Saving Residual OPQ rotation matrix to " << path_full<< std::endl;
+                faiss::write_VectorTransform(opq_matrix, path_full);
+            }
+        } catch (...) {
+            rc = -1;
+            std::cout << "Failed to build PQ files" << std::endl;
+
+            sprintf(path_full, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+            unlink(path_full);
+            sprintf(path_full, "%s/norm_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+            unlink(path_full);
+            if (with_opq) {
+                sprintf(path_full, "%s/matrix_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+                unlink(path_full);
+            }
+        }
+
+        return rc;
+    }
+
+    int IndexIVF_HNSW_Grouping::append_pq_info(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc)
+    {
+        int rc;
+
+        rc = prepare_db();
+        if (rc) {
+            std::cout << "Failed to prepare database" << std::endl;
+            return rc;
+        }
+
+        return db_p->AppendPQInfo(path, ver, with_opq, code_size, nsubc);
+    }
+
+    int IndexIVF_HNSW_Grouping::get_latest_pq_info(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc)
+    {
+        int rc;
+
+        rc = prepare_db();
+        if (rc) {
+            std::cout << "Failed to prepare database" << std::endl;
+            return rc;
+        }
+
+        return db_p->GetLatestPQInfo(path, ver, with_opq, code_size, nsubc);
+    }
 }

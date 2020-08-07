@@ -79,6 +79,22 @@ namespace ivfhnsw {
         /// Write distance between centroids to file given by path
         void dump_inter_centroid_dists(char *path);
 
+        /*
+         * Build PQ files
+         *
+         * @param path_learn  learn vector file full path
+         * @param path_out    directory to store PQ files generated
+         * @param with_opq    enable opq or not
+         * @param code_size   Code size per vector in bytes
+         * @param rsubt       ratio of vectors in learn vector file to train
+         * @param nsubc       number of subcentroids per group
+         *
+         */
+        int build_pq_files(const char *path_learn, const char *path_out, size_t pq_ver,
+                bool with_opq, size_t code_size, double rsubt, size_t nsubc);
+
+        int append_pq_info(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc);
+        int get_latest_pq_info(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
     protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points
         std::vector<float> query_centroid_dists;

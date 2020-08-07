@@ -35,8 +35,6 @@ int Index_DB::Connect() {
     return rc;
 }
 
-
-
 int Index_DB::CreateTable(const char *cmd_str, const char *table_nm) {
     PGresult   *res;
     int rc = 0;
@@ -62,13 +60,13 @@ int Index_DB::CreateTable(const char *cmd_str, const char *table_nm) {
     return rc;
 }
 
-int Index_DB::CreateBaseTables(size_t batch_idx) {
+int Index_DB::CreateBaseTable(size_t batch) {
     PGresult *res;
     char sql_str[1024], tbl_nm[128];
     int rc = -1;
 
     // create vector index table
-    sprintf(tbl_nm, "bigann_base_%lu", batch_idx);
+    sprintf(tbl_nm, "bigann_base_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (vec_id INTEGER, dim INTEGER, vec bytea)",
             tbl_nm);
@@ -76,13 +74,13 @@ int Index_DB::CreateBaseTables(size_t batch_idx) {
     if (rc) return rc;
 }
 
-int Index_DB::CreatePrecomputedIndexTables(size_t batch_idx) {
+int Index_DB::CreatePrecomputedIndexTables(size_t batch) {
     PGresult *res;
     char sql_str[1024], tbl_nm[128];
     int rc = -1;
 
     // create vector index table
-    sprintf(tbl_nm, "precomputed_idxs_%lu", batch_idx);
+    sprintf(tbl_nm, "precomputed_idxs_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (batch_size INTEGER, idxs bytea)",
             tbl_nm);
@@ -90,13 +88,13 @@ int Index_DB::CreatePrecomputedIndexTables(size_t batch_idx) {
     if (rc) return rc;
 }
 
-int Index_DB::CreateIndexTables(size_t batch_idx) {
+int Index_DB::CreateIndexTables(size_t batch) {
     PGresult *res;
     char sql_str[1024], tbl_nm[128];
     int rc = -1;
 
     // create vector index table
-    sprintf(tbl_nm, "index_vector_%lu", batch_idx);
+    sprintf(tbl_nm, "index_vector_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (dim INTEGER, id bytea)",
             tbl_nm);
@@ -104,7 +102,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
     if (rc) return rc;
 
     // create PQ codec table
-    sprintf(tbl_nm, "pq_codec_%lu", batch_idx);
+    sprintf(tbl_nm, "pq_codec_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (dim INTEGER, codes bytea)",
             tbl_nm);
@@ -112,7 +110,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
     if (rc) return rc;
 
     // create norm PQ codec table
-    sprintf(tbl_nm, "norm_codec_%lu", batch_idx);
+    sprintf(tbl_nm, "norm_codec_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (dim INTEGER, norm_codes bytea)",
             tbl_nm);
@@ -120,7 +118,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
     if (rc) return rc;
 
     // create NN centriods index table
-    sprintf(tbl_nm, "nn_centroid_idxs_%lu", batch_idx);
+    sprintf(tbl_nm, "nn_centroid_idxs_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (dim INTEGER, nn_centroid_idxs bytea)",
             tbl_nm);
@@ -128,7 +126,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
     if (rc) return rc;
 
     // create group size table
-    sprintf(tbl_nm, "subgroup_sizes_%lu", batch_idx);
+    sprintf(tbl_nm, "subgroup_sizes_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (dim INTEGER, subgroup_sizes bytea)",
             tbl_nm);
@@ -136,7 +134,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
     if (rc) return rc;
 
     // create inter centroid distances table
-    sprintf(tbl_nm, "inter_centroid_dists_%lu", batch_idx);
+    sprintf(tbl_nm, "inter_centroid_dists_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (dim INTEGER, inter_centroid_dists bytea)",
             tbl_nm);
@@ -144,7 +142,7 @@ int Index_DB::CreateIndexTables(size_t batch_idx) {
     if (rc) return rc;
 
     // create msic table for alphas and centroid_norms
-    sprintf(tbl_nm, "misc_%lu", batch_idx);
+    sprintf(tbl_nm, "misc_%lu", batch);
     sprintf(sql_str,
             "CREATE TABLE %s (size INTEGER, misc_data bytea)",
             tbl_nm);
@@ -168,18 +166,35 @@ int Index_DB::DropTable(char *tbl_nm) {
     return rc;
 }
 
-int Index_DB::DropBaseTable(size_t batch_idx, bool drop_older) {
+int Index_DB::DropBaseTables(std::vector<size_t> batchs) {
+    char tbl_nm[128];
+    int rc;
+
+    auto sz = batchs.size();
+    for (size_t i = 0; i < sz; i++) {
+        sprintf(tbl_nm, "bigann_base_%lu", i);
+        rc = DropTable(tbl_nm);
+        if (rc) {
+            std::cout << "Failed to drop table: " << tbl_nm << std::endl;
+            break;
+        }
+    }
+
+    return rc;
+}
+
+int Index_DB::DropBaseTable(size_t batch, bool drop_older) {
     char tbl_nm[128];
     int rc;
 
     // drop base table of given batch
-    sprintf(tbl_nm, "bigann_base_%lu", batch_idx);
+    sprintf(tbl_nm, "bigann_base_%lu", batch);
     rc = DropTable(tbl_nm);
     if (rc) return rc;
 
     // drop previous base table, when we disuse old vecotr data anymore
     if (drop_older) {
-        for (size_t i = 0; i < batch_idx; i++) {
+        for (size_t i = 0; i < batch; i++) {
             sprintf(tbl_nm, "bigann_base_%lu", i);
             rc = DropTable(tbl_nm);
             if (rc) return rc;
@@ -189,18 +204,18 @@ int Index_DB::DropBaseTable(size_t batch_idx, bool drop_older) {
     return rc;
 }
 
-int Index_DB::DropPrecomputedIndexTable(size_t batch_idx, bool drop_older) {
+int Index_DB::DropPrecomputedIndexTable(size_t batch, bool drop_older) {
     char tbl_nm[128];
     int rc;
 
     // drop precomputed index table of given batch
-    sprintf(tbl_nm, "precomputed_idxs_%lu", batch_idx);
+    sprintf(tbl_nm, "precomputed_idxs_%lu", batch);
     rc = DropTable(tbl_nm);
     if (rc) return rc;
 
     // drop previous precomputed index table, when we disuse old vecotr data anymore
     if (drop_older) {
-        for (size_t i = 0; i < batch_idx; i++) {
+        for (size_t i = 0; i < batch; i++) {
             sprintf(tbl_nm, "precomputed_idxs_%lu", i);
             rc = DropTable(tbl_nm);
             if (rc) return rc;
@@ -210,36 +225,36 @@ int Index_DB::DropPrecomputedIndexTable(size_t batch_idx, bool drop_older) {
     return rc;
 }
 
-void Index_DB::DropIndexTables(size_t batch_idx) {
+void Index_DB::DropIndexTables(size_t batch) {
     char tbl_nm[128];
     int rc = -1;
 
     // drop index vector table
-    sprintf(tbl_nm, "index_vector_%lu", batch_idx);
+    sprintf(tbl_nm, "index_vector_%lu", batch);
     DropTable(tbl_nm);
 
     // drop PQ codec table
-    sprintf(tbl_nm, "pq_codec_%lu", batch_idx);
+    sprintf(tbl_nm, "pq_codec_%lu", batch);
     DropTable(tbl_nm);
 
     // drop norm PQ codec table
-    sprintf(tbl_nm, "norm_codec_%lu", batch_idx);
+    sprintf(tbl_nm, "norm_codec_%lu", batch);
     DropTable(tbl_nm);
 
     // drop NN centriods index table
-    sprintf(tbl_nm, "nn_centroid_idxs_%lu", batch_idx);
+    sprintf(tbl_nm, "nn_centroid_idxs_%lu", batch);
     DropTable(tbl_nm);
 
     // drop NN group size table
-    sprintf(tbl_nm, "subgroup_sizes_%lu", batch_idx);
+    sprintf(tbl_nm, "subgroup_sizes_%lu", batch);
     DropTable(tbl_nm);
 
     // drop inter centroid distances table
-    sprintf(tbl_nm, "inter_centroid_dists_%lu", batch_idx);
+    sprintf(tbl_nm, "inter_centroid_dists_%lu", batch);
     DropTable(tbl_nm);
 
     // drop msic table for alphas and centroid_norms
-    sprintf(tbl_nm, "misc_%lu", batch_idx);
+    sprintf(tbl_nm, "misc_%lu", batch);
     DropTable(tbl_nm);
 }
 
@@ -374,10 +389,10 @@ int Index_DB::GetBaseId(size_t &id_base) {
     return 0;
 }
 
-int Index_DB::GetLatestBatch(size_t &batch_idx) {
+int Index_DB::GetLatestBatch(size_t &batch) {
     PGresult* res;
 
-    res = PQexec(conn, "DECLARE mycursor CURSOR FOR select * from system");
+    res = PQexec(conn, "DECLARE mycursor CURSOR FOR SELECT * FROM system ORDER BY batch DESC");
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
         std::cout << "DECLARE CURSOR failed: " << PQerrorMessage(conn) << std::endl;
@@ -395,33 +410,22 @@ int Index_DB::GetLatestBatch(size_t &batch_idx) {
         return -1;
     }
 
-    int nFields = PQnfields(res);
     int nRows = PQntuples(res);
     if (nRows != 1) {
         std::cout << "Not expected records count in table: system" << std::endl;
         PQclear(res);
         return -1;
     }
-    if (nFields != 1) {
-        std::cout << "Not expected fields number in table: system" << std::endl;
-        PQclear(res);
-        return -1;
-    }
 
-    batch_idx = atoi(PQgetvalue(res, 0, PQfnumber(res, "batch_idx")));
+    batch = atoi(PQgetvalue(res, 0, PQfnumber(res, "batch")));
     PQclear(res);
 
     return 0;
 }
 
-
-/*
- * CREATE TABLE system (batch_idx INTEGER PRIMARY KEY);
-*/
-int Index_DB::UpdateIndex(size_t batch_idx) {
+int Index_DB::CmdWithTrans(char *sql_str) {
     int rc = -1;
     PGresult *res;
-    char sql_str[512];
 
     res = PQexec(conn, "BEGIN");
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -431,22 +435,10 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
     }
     PQclear(res);
 
-    sprintf(sql_str, "INSERT INTO system(batch_idx) VALUES(%lu)", batch_idx);
     res = PQexec(conn, sql_str);
     cout << "INSERT result: " << PQresultStatus(res) << endl;
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        cout << "INSERT command failed" << endl;
-        std::cout << "Error of: " << PQerrorMessage(conn) << std::endl;
-        PQclear(res);
-        return rc;
-    }
-    PQclear(res);
-
-    sprintf(sql_str, "DELETE FROM system WHERE batch_idx<%u", batch_idx);
-    res = PQexec(conn, sql_str);
-    cout << "DELETE result: " << PQresultStatus(res) << endl;
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        cout << "DELETE command failed" << endl;
+        cout << "Failed to execute command: " << sql_str << endl;
         std::cout << "Error of: " << PQerrorMessage(conn) << std::endl;
         PQclear(res);
         return rc;
@@ -465,5 +457,66 @@ int Index_DB::UpdateIndex(size_t batch_idx) {
     return rc;
 }
 
+
+int Index_DB::UpdateIndex(size_t batch) {
+    int rc = -1;
+    PGresult *res;
+    char sql_str[512];
+
+    sprintf(sql_str, "INSERT INTO system(batch, ts) VALUES(%lu, NOW()::TIMESTAMP)", batch);
+    return CmdWithTrans(sql_str);
+}
+
+int Index_DB::AppendPQInfo(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc) {
+    int rc = -1;
+    PGresult *res;
+    char sql_str[1024];
+    char bool_var[8];
+
+    if (with_opq) {
+        strcpy(bool_var, "TRUE");
+    } else {
+        strcpy(bool_var, "FALSE");
+    }
+
+    sprintf(sql_str, "INSERT INTO pq_info(path, ver, with_opq, code_size, nsubc) VALUES(\'%s\', %lu, %s, %lu, %lu)",
+            path, ver, bool_var, code_size, nsubc);
+    std::cout << "Append PQ Info with SQL: " << sql_str << std::endl;
+    return CmdWithTrans(sql_str);
+}
+
+int Index_DB::GetLatestPQInfo(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc) {
+    PGresult *res = PQexec(conn, "SELECT * FROM pq_info ORDER BY ver DESC LIMIT 1");
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        cout << "Failed to retrieve data from vector_id_base table" << endl;
+        PQclear(res);
+        return -1;
+    }
+
+    int rows = PQntuples(res);
+    /*
+     * No records in pq_info table, it means it's new setup to run service
+     */
+    if (rows == 0) {
+        path[0] = '\0';
+        return 0;
+    } else {
+        strcpy(path, PQgetvalue(res, 0, PQfnumber(res, "path")));
+        ver = atoi(PQgetvalue(res, 0, PQfnumber(res, "ver")));
+
+        // TODO: need to verify if correct to process booleand type like this
+        char *sb = PQgetvalue(res, 0, PQfnumber(res, "with_opq"));
+        if (sb[0] == 'f' && sb[1] == '\0')
+            with_opq = false;
+        else
+            with_opq = true;
+
+        code_size = atoi(PQgetvalue(res, 0, PQfnumber(res, "code_size")));
+        nsubc = atoi(PQgetvalue(res, 0, PQfnumber(res, "nsubc")));
+    }
+    PQclear(res);
+
+    return 0;
+}
 
 

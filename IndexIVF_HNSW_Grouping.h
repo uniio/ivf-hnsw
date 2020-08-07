@@ -95,6 +95,18 @@ namespace ivfhnsw {
 
         int append_pq_info(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc);
         int get_latest_pq_info(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
+
+        /*
+         * Build Precomputed Index file
+         *
+         * @param path_base  base vector file full path
+         * @param path_prcomputed_index  prcomputed index file full path
+         *
+         * return value:
+         *  0  success build precomputed index file
+         * -1  error happend in progress of build precomputed index file
+         */
+        int build_prcomputed_index(const char *path_base, const char *path_prcomputed_index);
     protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points
         std::vector<float> query_centroid_dists;

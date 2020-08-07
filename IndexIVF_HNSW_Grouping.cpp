@@ -1005,4 +1005,62 @@ namespace ivfhnsw
 
         return db_p->GetLatestPQInfo(path, ver, with_opq, code_size, nsubc);
     }
+
+    int IndexIVF_HNSW_Grouping::build_prcomputed_index(const char *path_base, const char *path_prcomputed_index)
+    {
+        uint32_t dim;
+        size_t nvecs;
+        int rc;
+
+        rc = get_vec_attr(path_base, dim, nvecs);
+        if (rc) return rc;
+
+        std::cout << "Build precomputing indices" << std::endl;
+        StopW stopw = StopW();
+
+        std::ifstream input(path_base, std::ios::binary);
+        std::ofstream output(path_prcomputed_index, std::ios::binary);
+
+        if (!input.is_open()) {
+            std::cout << "Failed to open base vector file: " << path_base << std::endl;
+            return -1;
+        }
+
+        if (!output.is_open()) {
+            std::cout << "Failed to c prcomputed_indexbase file: " << path_prcomputed_index << std::endl;
+            return -1;
+        }
+
+        const uint32_t max_batch_size = 1000000;
+        uint32_t batch_size = max_batch_size;
+        if (nvecs < max_batch_size) batch_size = nvecs;
+
+        const size_t nbatches = nvecs / batch_size;
+
+        std::vector<float> batch(batch_size * dim);
+        std::vector<idx_t> precomputed_idx(batch_size);
+
+        // TODO: if we should let efSearch as a function parameter ?
+        quantizer->efSearch = 220;
+        for (size_t i = 0; i < nbatches; i++) {
+            if (i % 10 == 0) {
+                std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                          << (100.*i) / nbatches << "%" << std::endl;
+            }
+
+            try {
+                readXvecFvec<uint8_t>(input, batch.data(), dim, batch_size);
+                assign(batch_size, batch.data(), precomputed_idx.data());
+
+                output.write((char *) &batch_size, sizeof(uint32_t));
+                output.write((char *) precomputed_idx.data(), batch_size * sizeof(idx_t));
+            } catch (...) {
+                rc = -1;
+                break;
+            }
+        }
+
+        return rc;
+    }
+
 }

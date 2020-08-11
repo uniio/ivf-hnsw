@@ -105,8 +105,44 @@ namespace ivfhnsw {
          * return value:
          *  0  success build precomputed index file
          * -1  error happend in progress of build precomputed index file
+         *
+         * TODO: notice
+         * current code has limition on size of vector file
+         * may be we cannot process vector file which has vector number more than 100W
+         * caller must ensure not exceed this limit
          */
-        int build_prcomputed_index(const char *path_base, const char *path_prcomputed_index);
+        int build_prcomputed_index(const char *path_base,
+                                   const char *path_prcomputed_index);
+
+
+        /*
+         * Build Index file
+         *
+         * @param path_base  base vector file full path
+         * @param batch_begin  first batch number to process
+         * @param batch_end  last batch number to process
+         *
+         * return value:
+         *  0  success build index file
+         * -1  error happend in progress of build index file
+         *
+         */
+        int build_index(const char *path_base, const size_t batch_begin, const size_t batch_end);
+
+        /*
+         * Add vectors in a batch file into index
+         *
+         * @param path_base  base vector file full path
+         * @param path_precomputed_idx  precomputed index file file full path
+         *
+         * return value:
+         *  0  success to add the batch vector
+         * -1  failed to add the batch vector
+         *
+         */
+        int add_one_batch_vector(const char *path_base, const char *path_precomputed_idx);
+        int save_index(const char *path_model, const size_t idx_ver);
+
     protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points
         std::vector<float> query_centroid_dists;

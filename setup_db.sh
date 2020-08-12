@@ -4,6 +4,8 @@ if [ ! -f ${PWD}/dbsetup.sql ]; then
     exit 1
 fi
 
+export PGPASSWORD="postgres"
+
 # drop previous database
 dropdb -h localhost -p 5432 -U postgres servicedb
 

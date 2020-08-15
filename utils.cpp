@@ -280,6 +280,9 @@ namespace ivfhnsw {
         struct stat sb;
         size_t len;
 
+        // TODO: should we check dir mode ?
+        if (exists_dir(dir)) return 0;
+
         /* copy path */
         len = strnlen (dir, PATH_MAX);
         if (len == 0 || len == PATH_MAX) {

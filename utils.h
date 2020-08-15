@@ -154,6 +154,18 @@ namespace ivfhnsw {
         return f.good();
     }
 
+    inline bool exists_dir(const char *path) {
+        DIR *dp = opendir(path);
+        bool dir_exists = true;
+
+        if (dp == NULL)
+            dir_exists = false;
+        else
+            closedir(dp);
+
+        return dir_exists;
+    }
+
     enum vec_t {
         base_vec = 0,
         centroid_vec = 1
@@ -186,5 +198,15 @@ namespace ivfhnsw {
 
     /// clone file_src in new file named file_dst
     int copy_file(const char *file_src, const char *file_dst);
+
+    typedef system_conf {
+        char    path_base_data[1024];
+        char    path_base_model[1024];
+        size_t  batch_max;
+        size_t  dim;
+        size_t  nc;
+        size_t  nsubc;
+        size_t  code_size;
+    } system_conf_t;
 }
 #endif //IVF_HNSW_LIB_UTILS_H

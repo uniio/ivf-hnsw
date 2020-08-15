@@ -1,8 +1,8 @@
-#include <iostream>
-#include <fstream>
 #include <cstdio>
-#include <stdlib.h>
+#include <fstream>
+#include <iostream>
 #include <queue>
+#include <stdlib.h>
 #include <unordered_set>
 
 #include <ivf-hnsw/IndexIVF_HNSW.h>
@@ -15,7 +15,7 @@ using namespace ivfhnsw;
 //====================
 // IVF-HNSW on SIFT1B
 //====================
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     //===============
     // Parse Options
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     //==================
     // Initialize Index
     //==================
-    IndexIVF_HNSW *index = new IndexIVF_HNSW(opt.d, opt.nc, opt.code_size, 8);
+    IndexIVF_HNSW* index = new IndexIVF_HNSW(opt.d, opt.nc, opt.code_size, 8);
     index->build_quantizer(opt.path_centroids, opt.path_info, opt.path_edges, opt.M, opt.efConstruction);
     index->do_opq = opt.do_opq;
 
@@ -53,18 +53,19 @@ int main(int argc, char **argv)
     //==========
     if (exists(opt.path_pq) && exists(opt.path_norm_pq)) {
         std::cout << "Loading Residual PQ codebook from " << opt.path_pq << std::endl;
-        if (index->pq) delete index->pq;
+        if (index->pq)
+            delete index->pq;
         index->pq = faiss::read_ProductQuantizer(opt.path_pq);
 
-        if (opt.do_opq){
+        if (opt.do_opq) {
             std::cout << "Loading OPQ rotation matrix from " << opt.path_opq_matrix << std::endl;
-            index->opq_matrix = dynamic_cast<faiss::LinearTransform *>(faiss::read_VectorTransform(opt.path_opq_matrix));
+            index->opq_matrix = dynamic_cast<faiss::LinearTransform*>(faiss::read_VectorTransform(opt.path_opq_matrix));
         }
         std::cout << "Loading Norm PQ codebook from " << opt.path_norm_pq << std::endl;
-        if (index->norm_pq) delete index->norm_pq;
+        if (index->norm_pq)
+            delete index->norm_pq;
         index->norm_pq = faiss::read_ProductQuantizer(opt.path_norm_pq);
-    }
-    else {
+    } else {
         // Load learn set
         std::vector<float> trainvecs(opt.nt * opt.d);
         {
@@ -81,7 +82,7 @@ int main(int argc, char **argv)
         std::cout << "Saving Residual PQ codebook to " << opt.path_pq << std::endl;
         faiss::write_ProductQuantizer(index->pq, opt.path_pq);
 
-        if (opt.do_opq){
+        if (opt.do_opq) {
             std::cout << "Saving OPQ rotation matrix to " << opt.path_opq_matrix << std::endl;
             faiss::write_VectorTransform(index->opq_matrix, opt.path_opq_matrix);
         }
@@ -92,7 +93,7 @@ int main(int argc, char **argv)
     /************************/
     /** Precompute indexes **/
     /************************/
-    if (!exists(opt.path_precomputed_idxs)){
+    if (!exists(opt.path_precomputed_idxs)) {
         std::cout << "Precomputing indices" << std::endl;
         StopW stopw = StopW();
 
@@ -109,20 +110,20 @@ int main(int argc, char **argv)
         for (size_t i = 0; i < nbatches; i++) {
             if (i % 10 == 0) {
                 std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
-                          << (100.*i) / nbatches << "%" << std::endl;
+                          << (100. * i) / nbatches << "%" << std::endl;
             }
             readXvecFvec<uint8_t>(input, batch.data(), opt.d, batch_size);
             index->assign(batch_size, batch.data(), precomputed_idx.data());
 
-            output.write((char *) &batch_size, sizeof(uint32_t));
-            output.write((char *) precomputed_idx.data(), batch_size * sizeof(idx_t));
+            output.write((char*)&batch_size, sizeof(uint32_t));
+            output.write((char*)precomputed_idx.data(), batch_size * sizeof(idx_t));
         }
     }
 
     /******************************/
     /** Construct IVF-HNSW Index **/
     /******************************/
-    if (exists(opt.path_index)){
+    if (exists(opt.path_index)) {
         // Load Index
         std::cout << "Loading index from " << opt.path_index << std::endl;
         index->read(opt.path_index);
@@ -136,8 +137,8 @@ int main(int argc, char **argv)
         const size_t batch_size = 1000000;
         const size_t nbatches = opt.nb / batch_size;
         std::vector<float> batch(batch_size * opt.d);
-        std::vector <idx_t> idx_batch(batch_size);
-        std::vector <idx_t> ids_batch(batch_size);
+        std::vector<idx_t> idx_batch(batch_size);
+        std::vector<idx_t> ids_batch(batch_size);
 
         for (size_t b = 0; b < nbatches; b++) {
             if (b % 10 == 0) {
@@ -153,7 +154,7 @@ int main(int argc, char **argv)
         }
 
         // Computing Centroid Norms
-        std::cout << "Computing centroid norms"<< std::endl;
+        std::cout << "Computing centroid norms" << std::endl;
         index->compute_centroid_norms();
 
         // Save index, pq and norm_pq
@@ -162,7 +163,7 @@ int main(int argc, char **argv)
     }
     // For correct search using OPQ encoding rotate points in the coarse quantizer
     if (opt.do_opq) {
-        std::cout << "Rotating centroids"<< std::endl;
+        std::cout << "Rotating centroids" << std::endl;
         index->rotate_quantizer();
     }
 
@@ -170,10 +171,10 @@ int main(int argc, char **argv)
     // Parse groundtruth
     //===================
     std::cout << "Parsing groundtruth" << std::endl;
-    std::vector<std::priority_queue< std::pair<float, idx_t >>> answers;
-    (std::vector<std::priority_queue< std::pair<float, idx_t >>>(opt.nq)).swap(answers);
+    std::vector<std::priority_queue<std::pair<float, idx_t>>> answers;
+    (std::vector<std::priority_queue<std::pair<float, idx_t>>>(opt.nq)).swap(answers);
     for (size_t i = 0; i < opt.nq; i++)
-        answers[i].emplace(0.0f, massQA[opt.ngt*i]);
+        answers[i].emplace(0.0f, massQA[opt.ngt * i]);
 
     //=======================
     // Set search parameters
@@ -191,8 +192,8 @@ int main(int argc, char **argv)
 
     StopW stopw = StopW();
     for (size_t i = 0; i < opt.nq; i++) {
-        index->search(opt.k, massQ.data() + i*opt.d, distances, labels);
-        std::priority_queue<std::pair<float, idx_t >> gt(answers[i]);
+        index->search(opt.k, massQ.data() + i * opt.d, distances, labels);
+        std::priority_queue<std::pair<float, idx_t>> gt(answers[i]);
         std::unordered_set<idx_t> g;
 
         while (gt.size()) {

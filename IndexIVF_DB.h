@@ -9,6 +9,12 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <postgresql/libpq-fe.h>
+#include "utils.h"
+
+typedef struct batch_info {
+    size_t batch;
+    bool valid;
+} batch_info_t;
 
 class Index_DB {
 private:
@@ -165,13 +171,23 @@ public:
 
         return rc;
     }
-    int UpdateIndex(size_t batch);
+    int CreateBatch(size_t batch);
     int GetBaseId(size_t &id_base);
     int UpdateBaseId(size_t id_base, bool init_stage);
     int AppendPQInfo(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc);
     int GetLatestPQInfo(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
-private:
-    int GetLatestBatch(size_t &batch);
+    int GetBatchList(std::vector<batch_info_t>& batch_list);
+    int SetPathInfo(char* path_data_base, char* path_model_base, size_t batch_max);
+    int GetPathInfo(char* path_data_base, char* path_model_base);
+
+    int AppendIndexInfo(size_t idx_ver, size_t batch_start, size_t batch_end);
+    int GetLatestIndexInfo(size_t& ver, size_t& batch_start, size_t& batch_end);
+
+    int SetSysConfig(system_conf_t& sys_conf);
+    int GetSysConfig(system_conf_t &sys_conf);
+
+  private: 
+    int GetLatestBatch(size_t& batch);
     int CreateTable(const char *cmd_str, const char *table_nm);
     int UpdateMeta(size_t batch);
     int DropTable(char *tbl_nm);

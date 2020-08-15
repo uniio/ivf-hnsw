@@ -11,6 +11,8 @@ namespace ivfhnsw {
     extern int centriodTraceSetup();
     extern void centriodTraceClose();
 
+    enum class ACTION_PQ {PQ_CHECK, PQ_CLEANUP};
+
     //=======================================
     // IVF_HNSW + Grouping( + Pruning) index
     //=======================================
@@ -84,22 +86,26 @@ namespace ivfhnsw {
          *
          * @param path_learn  learn vector file full path
          * @param path_out    directory to store PQ files generated
+         * @param pq_ver    version of PQ
          * @param with_opq    enable opq or not
          * @param code_size   Code size per vector in bytes
          * @param rsubt       ratio of vectors in learn vector file to train
          * @param nsubc       number of subcentroids per group
          *
          */
-        int build_pq_files(const char *path_learn, const char *path_out, size_t pq_ver,
+        int build_pq_files(const char *path_learn, const char *path_out,
+        		size_t pq_ver,
                 bool with_opq, size_t code_size, double rsubt, size_t nsubc);
 
         int append_pq_info(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc);
         int get_latest_pq_info(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
 
+        bool action_on_pq(char *path_out, size_t pq_ver, bool with_opq, ACTION_PQ action);
+
         /*
          * Build Precomputed Index file
          *
-         * @param path_base  base vector file full path
+         * @param path_base base vector file full path
          * @param path_prcomputed_index  prcomputed index file full path
          *
          * return value:
@@ -116,7 +122,7 @@ namespace ivfhnsw {
 
 
         /*
-         * Build Index file
+         * Build Index file with given batchs of data
          *
          * @param path_base  base vector file full path
          * @param batch_begin  first batch number to process
@@ -127,7 +133,7 @@ namespace ivfhnsw {
          * -1  error happend in progress of build index file
          *
          */
-        int build_index(const char *path_base, const size_t batch_begin, const size_t batch_end);
+        int build_batchs_to_index(const char *path_base, const size_t batch_begin, const size_t batch_end);
 
         /*
          * Add vectors in a batch file into index
@@ -141,9 +147,19 @@ namespace ivfhnsw {
          *
          */
         int add_one_batch_vector(const char *path_base, const char *path_precomputed_idx);
+        void get_index_path(const char* path_model_base, const size_t idx_ver, char* path_index);
         int save_index(const char *path_model, const size_t idx_ver);
 
-    protected:
+        void get_pq_path(const char* path_model_base, const size_t idx_ver, char* path_index);
+        void get_opq_matrix_path(const char* path_model_base, const size_t idx_ver, char* path_index);
+        void get_norm_pq_path(const char* path_model_base, const size_t idx_ver, char* path_index);
+
+        void get_vector_path(const char* path_data_base, const size_t batch_idx, char* path_vector);
+        void get_precomputed_idx_path(const char* path_data_base, const size_t batch_idx, char* path_precomputed_idx);
+
+        int build_index(const char* path_base_data, const size_t batch_begin, const size_t batch_end, const char* path_base_model, const size_t index_ver);
+
+      protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points
         std::vector<float> query_centroid_dists;
 

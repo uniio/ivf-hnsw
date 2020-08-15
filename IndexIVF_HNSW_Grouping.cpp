@@ -436,7 +436,7 @@ namespace ivfhnsw
 
     int IndexIVF_HNSW_Grouping::commit_db_index(size_t batch_idx)
     {
-        return db_p->UpdateIndex(batch_idx);
+        return db_p->CreateBatch(batch_idx);
     }
 
     template<typename T>
@@ -797,6 +797,7 @@ namespace ivfhnsw
         printf("Training %zdx%zd PQ on %ld vectors in 1D\n", norm_pq->M, norm_pq->ksub, train_norms.size());
         norm_pq->verbose = true;
         norm_pq->train(n, train_norms.data());
+    printf("done xxxxxxxxxxxxxxxxx\n");
     }
 
     void IndexIVF_HNSW_Grouping::compute_inter_centroid_dists()
@@ -909,8 +910,41 @@ namespace ivfhnsw
         return (group_denominator > 0) ? group_numerator / group_denominator : 0.0;
     }
 
-    int IndexIVF_HNSW_Grouping::build_pq_files(const char *path_learn, const char *path_out, size_t pq_ver,
-                                      bool with_opq, size_t code_size, double rsubt, size_t nsubc)
+    bool IndexIVF_HNSW_Grouping::action_on_pq(char *path_out, size_t pq_ver, bool with_opq, ACTION_PQ action)
+    {
+        char path_ver[1024], path_full[1024];
+        sprintf(path_ver, "%s/%lu", path_out, pq_ver);
+
+        sprintf(path_full, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+        if (action == ACTION_PQ::PQ_CHECK) {
+            if (!exists(path_full)) return false;
+        } else {
+            unlink(path_full);
+        }
+
+        sprintf(path_full, "%s/norm_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+        if (action == ACTION_PQ::PQ_CHECK) {
+            if (!exists(path_full)) return false;
+        } else {
+            unlink(path_full);
+        }
+
+        if (with_opq) {
+            sprintf(path_full, "%s/matrix_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+            if (action == ACTION_PQ::PQ_CHECK) {
+                if (!exists(path_full)) return false;
+            } else {
+                unlink(path_full);
+            }
+        }
+
+        return true;
+    }
+
+    int IndexIVF_HNSW_Grouping::build_pq_files(const char *path_learn, const char *path_out,
+                                               size_t pq_ver,
+                                               bool with_opq, size_t code_size,
+                                               double rsubt, size_t nsubc)
     {
         int rc = 0;
         char path_full[1024];
@@ -918,9 +952,11 @@ namespace ivfhnsw
 
         // Prepare output directory for store PQ files
         sprintf(path_ver, "%s/%lu", path_out, pq_ver);
-        if (mkdir_p(path_ver, 0755)) {
-            std::cout << "Failed to create directory: " << path_ver << std::endl;
-            return rc;
+        if (!exists(path_ver)) {
+            if (mkdir_p(path_ver, 0755)) {
+                std::cout << "Failed to create directory: " << path_ver << std::endl;
+                return rc;
+            }
         }
 
         std::cout << "Build PQ files based on learning set file: " << path_learn << std::endl;
@@ -1184,9 +1220,50 @@ namespace ivfhnsw
         }
     }
 
-    int IndexIVF_HNSW_Grouping::save_index(const char *path_model, const size_t idx_ver)
+    void IndexIVF_HNSW_Grouping::get_index_path(const char* path_model_base, const size_t idx_ver, char* path_index)
     {
-        char path_index[1024];
+        sprintf(path_index, "%s/%lu/ivfhnsw_OPQ%lu_nsubc%lu_%lu.index",
+                path_model_base, idx_ver, code_size, nsubc, idx_ver);
+    }
+
+    void IndexIVF_HNSW_Grouping::get_pq_path(const char* path_model_base, const size_t idx_ver, char* path_index)
+    {
+        sprintf(path_index, "%s/%lu/pq%lu_nsubc%lu.opq",
+                path_model_base, idx_ver, code_size, nsubc);
+    }
+
+    void IndexIVF_HNSW_Grouping::get_opq_matrix_path(const char* path_model_base, const size_t idx_ver, char* path_index)
+    {
+        sprintf(path_index, "%s/%lu/matrix_pq%lu_nsubc%lu.opq",
+                path_model_base, idx_ver, code_size, nsubc);
+    }
+
+    void IndexIVF_HNSW_Grouping::get_norm_pq_path(const char* path_model_base, const size_t idx_ver, char* path_index)
+    {
+        sprintf(path_index, "%s/%lu/norm_pq%lu_nsubc%lu.opq",
+                path_model_base, idx_ver, code_size, nsubc);
+    }
+
+    void IndexIVF_HNSW_Grouping::get_vector_path(const char* path_data_base, const size_t batch_idx, char* path_vector)
+    {
+        // TODO: current code assume maximize batch index number is 100
+        // change format 02lu to 03lu etc. when use bigger batch index number
+        sprintf(path_vector, "%s/bigann_base_%02lu.bvecs",
+                path_data_base, batch_idx);
+    }
+
+    void IndexIVF_HNSW_Grouping::get_precomputed_idx_path(const char* path_data_base, const size_t batch_idx, char* path_precomputed_idx)
+    {
+        // TODO: current code assume maximize batch index number is 100
+        // change format 02lu to 03lu etc. when use bigger batch index number
+        sprintf(path_precomputed_idx, "%s/precomputed_idxs_sift1b_%02lu.ivecs",
+                path_data_base, batch_idx);
+    }
+
+    int IndexIVF_HNSW_Grouping::save_index(const char* path_model, const size_t idx_ver)
+    {
+        char path_index[1024], path_index_dir[1024], *ptr;
+        int rc;
 
         // Computing centroid norms and inter-centroid distances
         std::cout << "Computing centroid norms"<< std::endl;
@@ -1195,14 +1272,21 @@ namespace ivfhnsw
         compute_inter_centroid_dists();
 
         // Save index, always truncate file
-        sprintf(path_index, "%s/ivfhnsw_OPQ%lu_nsubc%lu_%lu.index",
-                path_model, code_size, nsubc, idx_ver);
+        get_index_path(path_model, idx_ver, path_index);
+        strcpy(path_index_dir, path_index);
+        ptr = rindex(path_index_dir, '/');
+        *ptr = '\0';
+        rc = mkdir_p(path_index_dir, 0755);
+        if (rc) {
+            std::cout << "Failed to create directory: " << path_index_dir << std::endl;
+            return rc;
+        }
         std::cout << "Saving index to " << path_index << std::endl;
 
         return write(path_index, true);
     }
 
-    int IndexIVF_HNSW_Grouping::build_index(const char *path_base,
+    int IndexIVF_HNSW_Grouping::build_batchs_to_index(const char *path_base,
                                             const size_t batch_begin,
                                             const size_t batch_end)
     {
@@ -1218,10 +1302,37 @@ namespace ivfhnsw
 
             rc = add_one_batch_vector(path_vector, path_precomputed_idx);
             if (rc) {
+                std::cout << "Failed to add vector from file: " << path_vector << " to index" << std::endl;
                 return -1;
             }
         }
 
         return 0;
     }
-}
+
+    int IndexIVF_HNSW_Grouping::build_index(const char*  path_base_data,
+                                            const size_t batch_begin,
+                                            const size_t batch_end,
+                                            const char*  path_base_model,
+                                            const size_t index_ver)
+    {
+        int rc;
+        rc = build_batchs_to_index(path_base_data, batch_begin, batch_end);
+        if (rc) {
+            // don't need to output message, already have in calling function
+            return rc;
+        }
+        rc = save_index(path_base_model, index_ver);
+        if (rc) {
+            // don't need to output message, already have in calling function
+            return rc;
+        }
+        rc = db_p->AppendIndexInfo(index_ver, batch_begin, batch_end);
+        if (!rc) {
+            std::cout << "Success build index for batch from " << batch_begin << " to " << batch_end << std::endl;
+        } else {
+            std::cout << "Failed to build index for batch from " << batch_begin << " to " << batch_end << std::endl;
+        }
+
+        return rc;
+    }

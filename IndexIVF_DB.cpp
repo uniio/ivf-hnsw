@@ -106,7 +106,7 @@ int Index_DB::SetSysConfig(system_conf_t &sys_conf) {
     PGresult *res;
     char sql_str[1024];
 
-    sprintf(sql_str, "INSERT INTO system(path_base_data, path_base_model, batch_max, dim, nc, nsubc) VALUES(%s, %s, %lu, %lu, %lu, %lu, %lu)",
+    sprintf(sql_str, "INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsubc, code_size) VALUES(%s, %s, %lu, %lu, %lu, %lu, %lu)",
             sys_conf.path_base_data, sys_conf.path_base_model, sys_conf.batch_max, sys_conf.dim, sys_conf.nc, sys_conf.nsubc, sys_conf.code_size);
     std::cout << "Setup path info with SQL: " << sql_str << std::endl;
     return CmdWithTrans(sql_str);
@@ -115,7 +115,7 @@ int Index_DB::SetSysConfig(system_conf_t &sys_conf) {
 int Index_DB::GetSysConfig(system_conf_t &sys_conf) {
     PGresult *res;
 
-    res = PQexec(conn, "DECLARE mycursor CURSOR FOR SELECT * FROM system");
+    res = PQexec(conn, "DECLARE mycursor CURSOR FOR SELECT * FROM system_orca");
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         std::cout << "DECLARE CURSOR failed: " << PQerrorMessage(conn) << std::endl;
         PQclear(res);
@@ -133,7 +133,7 @@ int Index_DB::GetSysConfig(system_conf_t &sys_conf) {
 
     int nRows = PQntuples(res);
     if (nRows == 0) {
-        std::cout << "system table is empty, BUG" << std::endl;
+        std::cout << "system_orca table is empty, BUG" << std::endl;
         PQclear(res);
         return -1;
     }

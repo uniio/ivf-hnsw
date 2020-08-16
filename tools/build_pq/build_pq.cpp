@@ -323,8 +323,7 @@ int main(int argc, char **argv) {
                           pq_build_param.ratio_train,
                           pq_build_param.nsubc);
 
-    index->append_pq_info(pq_build_param.path_learn,
-                          pq_build_param.ver,
+    index->append_pq_info(pq_build_param.ver,
                           pq_build_param.do_opq,
                           pq_build_param.code_size,
                           pq_build_param.nsubc);

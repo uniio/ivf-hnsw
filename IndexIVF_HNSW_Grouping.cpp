@@ -41,6 +41,26 @@ namespace ivfhnsw
         inter_centroid_dists.resize(nc);
     }
 
+    IndexIVF_HNSW_Grouping::IndexIVF_HNSW_Grouping(size_t dim, size_t ncentroids, size_t bytes_per_code,
+                                                   size_t nbits_per_idx, size_t nsubcentroids, Index_DB *db_ref):
+           IndexIVF_HNSW(dim, ncentroids, bytes_per_code, nbits_per_idx), nsubc(nsubcentroids)
+    {
+        alphas.resize(nc);
+        nn_centroid_idxs.resize(nc);
+        subgroup_sizes.resize(nc);
+
+        query_centroid_dists.resize(nc);
+        std::fill(query_centroid_dists.begin(), query_centroid_dists.end(), 0);
+        inter_centroid_dists.resize(nc);
+
+        db_p = db_ref;
+    }
+
+    IndexIVF_HNSW_Grouping::~IndexIVF_HNSW_Grouping()
+    {
+        if (db_free && db_p)
+            delete db_p;
+    }
 
     // try to connect database
     int IndexIVF_HNSW_Grouping::setup_db(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr)
@@ -52,6 +72,8 @@ namespace ivfhnsw
         if (rc) {
             delete db_p;
             db_p = nullptr;
+        } else {
+            db_free =  true;
         }
 
         return rc;
@@ -411,18 +433,6 @@ namespace ivfhnsw
         }
     }
 
-    int IndexIVF_HNSW_Grouping::prepare_db(size_t batch_idx)
-    {
-        if (db_p == nullptr) {
-            std::cout << "Connect to servicedb ..." << std::endl;
-            int rc = setup_db("localhost", 5432, "servicedb", "postgres", "postgres");
-            if (rc) return rc;
-        }
-        std::cout << "Prepare tables in servicedb for batch index: " << batch_idx << std::endl;
-        db_p->DropIndexTables(batch_idx);
-        return db_p->CreateIndexTables(batch_idx);
-    }
-
     int IndexIVF_HNSW_Grouping::prepare_db()
     {
         int rc = 0;
@@ -434,122 +444,9 @@ namespace ivfhnsw
         return rc;
     }
 
-    int IndexIVF_HNSW_Grouping::commit_db_index(size_t batch_idx)
+    int IndexIVF_HNSW_Grouping::create_new_batch(size_t batch_idx)
     {
         return db_p->CreateBatch(batch_idx);
-    }
-
-    template<typename T>
-    int IndexIVF_HNSW_Grouping::write_db_base_vector(size_t batch_idx, size_t vec_id, std::vector<T> &ivec)
-    {
-        char table_nm[128];
-        int rc;
-
-        // Save vector indices
-        sprintf(table_nm, "bigann_base_%lu", batch_idx);
-        rc = db_p->WriteBaseVector(table_nm, vec_id, ivec);
-        if (rc) {
-            std::cout << "Failed to save vector to table: " << table_nm << std::endl;
-        }
-
-        return rc;
-    }
-
-    template<typename T>
-    int IndexIVF_HNSW_Grouping::write_db_precomputed_index(size_t batch_idx, std::vector<T> &ivec)
-    {
-        char table_nm[128];
-        int rc;
-
-        // Save vector indices
-        sprintf(table_nm, "precomputed_idxs_%lu", batch_idx);
-        rc = db_p->WriteVector(table_nm, "batch_size", "idxs", ivec);
-        if (rc) {
-            std::cout << "Failed to save vector to table: " << table_nm << std::endl;
-        }
-
-        return rc;
-    }
-
-    int IndexIVF_HNSW_Grouping::write_db_index(size_t batch_idx)
-    {
-        char table_nm[128];
-        int rc;
-
-        // Save vector indices
-        sprintf(table_nm, "index_vector_%lu", batch_idx);
-        for (size_t i = 0; i < nc; i++) {
-            rc = db_p->WriteVector(table_nm, "dim", "id", ids[i]);
-            if (rc) {
-                std::cout << "Failed to save index vector" << std::endl;
-                return rc;
-            }
-        }
-
-        // Save PQ codes
-        sprintf(table_nm, "pq_codec_%lu", batch_idx);
-        for (size_t i = 0; i < nc; i++) {
-            rc = db_p->WriteVector(table_nm, "dim", "codes", codes[i]);
-            if (rc) {
-                std::cout << "Failed to save PQ codes" << std::endl;
-                return rc;
-            }
-        }
-
-        // Save norm PQ codes
-        sprintf(table_nm, "norm_codec_%lu", batch_idx);
-        for (size_t i = 0; i < nc; i++) {
-            rc = db_p->WriteVector(table_nm, "dim", "norm_codes", norm_codes[i]);
-            if (rc) {
-                std::cout << "Failed to save norm PQ codes" << std::endl;
-                return rc;
-            }
-        }
-
-        // Save NN centroid indices
-        sprintf(table_nm, "nn_centroid_idxs_%lu", batch_idx);
-        for (size_t i = 0; i < nc; i++) {
-            rc = db_p->WriteVector(table_nm, "dim", "nn_centroid_idxs", nn_centroid_idxs[i]);
-            if (rc) {
-                std::cout << "Failed to save NN centroid indices" << std::endl;
-                return rc;
-            }
-        }
-
-        // Save group sizes
-        sprintf(table_nm, "subgroup_sizes_%lu", batch_idx);
-        for (size_t i = 0; i < nc; i++) {
-            rc = db_p->WriteVector(table_nm, "dim", "subgroup_sizes", subgroup_sizes[i]);
-            if (rc) {
-                std::cout << "Failed to save group sizes" << std::endl;
-                return rc;
-            }
-        }
-
-        // Save inter centroid distances
-        sprintf(table_nm, "inter_centroid_dists_%lu", batch_idx);
-        for (size_t i = 0; i < nc; i++) {
-            rc = db_p->WriteVector(table_nm, "dim", "inter_centroid_dists", inter_centroid_dists[i]);
-            if (rc) {
-                std::cout << "Failed to save inter centroid distances" << std::endl;
-                return rc;
-            }
-        }
-
-        // Save alphas and centroid norms
-        sprintf(table_nm, "misc_%lu", batch_idx);
-        rc = db_p->WriteVector(table_nm, "size", "misc_data", alphas);
-        if (rc) {
-            std::cout << "Failed to save alphas" << std::endl;
-            return rc;
-        }
-        rc = db_p->WriteVector(table_nm, "size", "misc_data", centroid_norms);
-        if (rc) {
-            std::cout << "Failed to save centroid norms" << std::endl;
-            return rc;
-        }
-
-        return 0;
     }
 
     int IndexIVF_HNSW_Grouping::write(const char *path_index, bool do_trunc)

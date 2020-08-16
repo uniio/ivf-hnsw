@@ -222,7 +222,7 @@ add_loop:
 //            std::cout << "Failed to write index table" << std::endl;
 //            exit(-1);
 //        }
-        if (index->commit_db_index(segments_idx)) {
+        if (index->create_new_batch(segments_idx)) {
             std::cout << "Failed to write index table" << std::endl;
             exit(-1);
         }

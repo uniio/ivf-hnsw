@@ -61,7 +61,7 @@ int main(int argc, char** argv)
         std::cout << "Failed to get system configuration" << std::endl;
         exit(1);
     }
-    rc = db_p->GetLatestPQInfo(pq_conf);
+    rc = db_p->GetLatestPQConf(pq_conf);
     if (rc) {
         std::cout << "Failed to get PQ configuration" << std::endl;
         exit(1);

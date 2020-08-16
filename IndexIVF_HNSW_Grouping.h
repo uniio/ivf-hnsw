@@ -26,10 +26,16 @@ namespace ivfhnsw {
         std::vector<float> alphas;    ///< Coefficients that determine the location of sub-centroids
 
         Index_DB *db_p = nullptr;
+        bool db_free = false;
 
     public:
         IndexIVF_HNSW_Grouping(size_t dim, size_t ncentroids, size_t bytes_per_code,
                                size_t nbits_per_idx, size_t nsubcentroids);
+
+        IndexIVF_HNSW_Grouping(size_t dim, size_t ncentroids, size_t bytes_per_code,
+                               size_t nbits_per_idx, size_t nsubcentroids, Index_DB *db_ref);
+
+        ~IndexIVF_HNSW_Grouping();
 
         /** Add <group_size> vectors of dimension <d> from the <group_idx>-th group to the index.
           *
@@ -54,24 +60,10 @@ namespace ivfhnsw {
         // setup database related things
         int setup_db(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
 
-        // save index into db tables
-        int write_db_index(size_t batch_idx);
-
-        // save base vector into db tables
-        template<typename T>
-        int write_db_base_vector(size_t batch_idx, size_t eid, std::vector<T> &ivec);
-
-        // save precomputed index into db tables
-        template<typename T>
-        int write_db_precomputed_index(size_t batch_idx, std::vector<T> &ivec);
-
-        // prepare db and database tables for the batch of index
-        int prepare_db(size_t batch_idx);
-
         int prepare_db();
 
         // commit batch index status
-        int commit_db_index(size_t batch_idx);
+        int create_new_batch(size_t batch_idx);
 
         void train_pq(size_t n, const float *x);
 

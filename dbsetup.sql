@@ -47,14 +47,12 @@ CREATE TABLE IF NOT EXISTS index_info (
 );
 
 /*
-  path is path to store PQ files
   ver is version of the PQ files
   with_opq is enable/disable opq encoding when build PQ files
   code_size is code size per vector in bytes
   nsubc is number of subcentroids per group
 */
 CREATE TABLE IF NOT EXISTS pq_info (
-    path VARCHAR(1024) NOT NULL,
     ver INTEGER NOT NULL,
     with_opq BOOLEAN NOT NULL,
     code_size INTEGER NOT NULL,
@@ -62,9 +60,8 @@ CREATE TABLE IF NOT EXISTS pq_info (
 );
 
 CREATE TABLE IF NOT EXISTS pq_conf (
-    path VARCHAR(1024) NOT NULL,
     ver INTEGER NOT NULL,
     with_opq BOOLEAN NOT NULL,
-    code_size INTEGER NOT NULL,
-    nsubc INTEGER NOT NULL
+    M INTEGER NOT NULL,
+    efConstruction INTEGER NOT NULL,
 );

@@ -9,6 +9,8 @@
 #include <iostream>
 #include <sys/time.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #include <faiss/utils.h>
 
@@ -199,7 +201,7 @@ namespace ivfhnsw {
     /// clone file_src in new file named file_dst
     int copy_file(const char *file_src, const char *file_dst);
 
-    typedef system_conf {
+    typedef struct system_conf {
         char    path_base_data[1024];
         char    path_base_model[1024];
         size_t  batch_max;
@@ -208,5 +210,12 @@ namespace ivfhnsw {
         size_t  nsubc;
         size_t  code_size;
     } system_conf_t;
+
+    typedef struct pq_conf {
+        size_t ver;
+        bool with_opq;
+        size_t M;
+        size_t efConstruction;
+    } pq_conf_t;
 }
 #endif //IVF_HNSW_LIB_UTILS_H

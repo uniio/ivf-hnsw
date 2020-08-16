@@ -97,8 +97,8 @@ namespace ivfhnsw {
         		size_t pq_ver,
                 bool with_opq, size_t code_size, double rsubt, size_t nsubc);
 
-        int append_pq_info(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc);
-        int get_latest_pq_info(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
+        int append_pq_info(size_t ver, bool with_opq, size_t code_size, size_t nsubc);
+        int get_latest_pq_info(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
 
         bool action_on_pq(char *path_out, size_t pq_ver, bool with_opq, ACTION_PQ action);
 
@@ -147,17 +147,22 @@ namespace ivfhnsw {
          *
          */
         int add_one_batch_vector(const char *path_base, const char *path_precomputed_idx);
-        void get_index_path(const char* path_model_base, const size_t idx_ver, char* path_index);
-        int save_index(const char *path_model, const size_t idx_ver);
+        void get_path_index(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
+        int save_index(const system_conf_t sys_conf, const size_t idx_ver);
 
-        void get_pq_path(const char* path_model_base, const size_t idx_ver, char* path_index);
-        void get_opq_matrix_path(const char* path_model_base, const size_t idx_ver, char* path_index);
-        void get_norm_pq_path(const char* path_model_base, const size_t idx_ver, char* path_index);
+        void get_path_centroids(const system_conf_t sys_conf, char *path_index);
 
-        void get_vector_path(const char* path_data_base, const size_t batch_idx, char* path_vector);
-        void get_precomputed_idx_path(const char* path_data_base, const size_t batch_idx, char* path_precomputed_idx);
+        void get_path_info(const system_conf_t sys_conf, const pq_conf_t pq_conf, char *path_index);
+        void get_path_edges(const system_conf_t sys_conf, const pq_conf_t pq_conf, char *path_index);
 
-        int build_index(const char* path_base_data, const size_t batch_begin, const size_t batch_end, const char* path_base_model, const size_t index_ver);
+        void get_path_pq(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
+        void get_path_opq_matrix(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
+        void get_path_norm_pq(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
+
+        void get_path_vector(const system_conf_t sys_conf, const size_t batch_idx, char *path_vector);
+        void get_path_precomputed_idx(const system_conf_t sys_conf, const size_t batch_idx, char *path_precomputed_idx);
+
+        int build_index(const system_conf_t sys_conf, const size_t batch_begin, const size_t batch_end, const size_t index_ver);
 
       protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points

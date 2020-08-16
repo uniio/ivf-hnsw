@@ -9,7 +9,9 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <postgresql/libpq-fe.h>
-#include "utils.h"
+#include <ivf-hnsw/utils.h>
+
+namespace ivfhnsw {
 
 typedef struct batch_info {
     size_t batch;
@@ -17,11 +19,12 @@ typedef struct batch_info {
 } batch_info_t;
 
 class Index_DB {
-private:
+  private:
     typedef uint32_t idx_t;
     char conninfo[512];
     PGconn *conn = nullptr;
-public:
+
+  public:
     explicit Index_DB(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
     virtual ~Index_DB();
 
@@ -36,15 +39,14 @@ public:
     int WriteIndexMeta(size_t dim, size_t nc, size_t nsubc);
     int LoadIndexMeta(size_t &dim, size_t &nc, size_t &nsubc);
     int LoadIndex(size_t batch);
-    template<typename T>
+    template <typename T>
     int ReadVectors(char *table_nm, size_t num_centroids, std::vector<std::vector<idx_t>> &dvec) {
-        PGresult* res;
+        PGresult *res;
         char sql_str[512];
 
         sprintf(sql_str, "DECLARE mycursor CURSOR FOR select * from %s", table_nm);
         res = PQexec(conn, sql_str);
-        if (PQresultStatus(res) != PGRES_COMMAND_OK)
-        {
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             std::cout << "DECLARE CURSOR failed: " << PQerrorMessage(conn) << std::endl;
             PQclear(res);
             return -1;
@@ -53,8 +55,7 @@ public:
 
         // get all result from database
         res = PQexec(conn, "FETCH ALL in mycursor");
-        if (PQresultStatus(res) != PGRES_TUPLES_OK)
-        {
+        if (PQresultStatus(res) != PGRES_TUPLES_OK) {
             std::cout << "FETCH ALL failed: " << PQerrorMessage(conn) << std::endl;
             PQclear(res);
             return -1;
@@ -69,8 +70,7 @@ public:
         }
 
         dvec.resize(nRows);
-        for (int i = 0; i < nRows; i++)
-        {
+        for (int i = 0; i < nRows; i++) {
             auto ivec = dvec[i];
             auto vsz = atoi(PQgetvalue(res, i, 0));
             ivec.resize(vsz);
@@ -89,18 +89,17 @@ public:
         return 0;
     }
 
-    template<typename T>
+    template <typename T>
     int WriteVector(char *table_nm, char *col0, char *col1, std::vector<T> &ivec) {
         int rc = 0;
         size_t sz = ivec.size();
         size_t dsize = sz * sizeof(T);
 
-        PGresult* res;
+        PGresult *res;
         const uint32_t sz_big_endian = htonl((uint32_t)sz);
-        const char* const paramValues[] = {
-                                               reinterpret_cast<const char* const>(&sz_big_endian),
-                                               reinterpret_cast<const char* const>(ivec.data())
-                                          };
+        const char *const paramValues[] = {
+            reinterpret_cast<const char *const>(&sz_big_endian),
+            reinterpret_cast<const char *const>(ivec.data())};
         const int paramLenghts[] = {sizeof(sz_big_endian), dsize};
         const int paramFormats[] = {1, 1}; /* binary */
         char sql_str[512];
@@ -109,18 +108,17 @@ public:
                 table_nm, col0, col1);
 
         res = PQexecParams(
-          conn,
-          sql_str,
-          2,
-          NULL, /* Types of parameters, unused as casts will define types */
-          paramValues,
-          paramLenghts,
-          paramFormats,
-          1 // binary results
+            conn,
+            sql_str,
+            2,
+            NULL, /* Types of parameters, unused as casts will define types */
+            paramValues,
+            paramLenghts,
+            paramFormats,
+            1 // binary results
         );
 
-        if (PQresultStatus(res) != PGRES_COMMAND_OK)
-        {
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             std::cout << "Failed to insert data to table: " << table_nm << std::endl;
             std::cout << "Error of: " << PQerrorMessage(conn) << std::endl;
             rc = -1;
@@ -129,20 +127,19 @@ public:
 
         return rc;
     }
-    template<typename T>
+    template <typename T>
     int WriteBaseVector(char *table_nm, size_t vec_id, std::vector<T> &ivec) {
         int rc = 0;
         size_t sz = ivec.size();
         size_t dsize = sz * sizeof(T);
 
-        PGresult* res;
+        PGresult *res;
         const uint32_t eid_big_endian = htonl((uint32_t)vec_id);
         const uint32_t sz_big_endian = htonl((uint32_t)sz);
-        const char* const paramValues[] = {
-                reinterpret_cast<const char* const>(&eid_big_endian),
-                                               reinterpret_cast<const char* const>(&sz_big_endian),
-                                               reinterpret_cast<const char* const>(ivec.data())
-                                          };
+        const char *const paramValues[] = {
+            reinterpret_cast<const char *const>(&eid_big_endian),
+            reinterpret_cast<const char *const>(&sz_big_endian),
+            reinterpret_cast<const char *const>(ivec.data())};
         const int paramLenghts[] = {sizeof(eid_big_endian), sizeof(sz_big_endian), dsize};
         const int paramFormats[] = {1, 1, 1}; /* binary */
         char sql_str[512];
@@ -151,18 +148,17 @@ public:
                 table_nm);
 
         res = PQexecParams(
-          conn,
-          sql_str,
-          3,
-          NULL, /* Types of parameters, unused as casts will define types */
-          paramValues,
-          paramLenghts,
-          paramFormats,
-          1 // binary results
+            conn,
+            sql_str,
+            3,
+            NULL, /* Types of parameters, unused as casts will define types */
+            paramValues,
+            paramLenghts,
+            paramFormats,
+            1 // binary results
         );
 
-        if (PQresultStatus(res) != PGRES_COMMAND_OK)
-        {
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             std::cout << "Failed to insert data to table: " << table_nm << std::endl;
             std::cout << "Error of: " << PQerrorMessage(conn) << std::endl;
             rc = -1;
@@ -174,24 +170,27 @@ public:
     int CreateBatch(size_t batch);
     int GetBaseId(size_t &id_base);
     int UpdateBaseId(size_t id_base, bool init_stage);
-    int AppendPQInfo(const char *path, size_t ver, bool with_opq, size_t code_size, size_t nsubc);
-    int GetLatestPQInfo(char *path, size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
-    int GetBatchList(std::vector<batch_info_t>& batch_list);
-    int SetPathInfo(char* path_data_base, char* path_model_base, size_t batch_max);
-    int GetPathInfo(char* path_data_base, char* path_model_base);
+    int AppendPQInfo(size_t ver, bool with_opq, size_t code_size, size_t nsubc);
+    int GetLatestPQInfo(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
+    int AppendPQInfo(pq_conf_t &pq_conf);
+    int GetLatestPQInfo(pq_conf_t &pq_conf);
+    int GetBatchList(std::vector<batch_info_t> &batch_list);
+    int SetPathInfo(char *path_data_base, char *path_model_base, size_t batch_max);
+    int GetPathInfo(char *path_data_base, char *path_model_base);
 
     int AppendIndexInfo(size_t idx_ver, size_t batch_start, size_t batch_end);
-    int GetLatestIndexInfo(size_t& ver, size_t& batch_start, size_t& batch_end);
+    int GetLatestIndexInfo(size_t &ver, size_t &batch_start, size_t &batch_end);
 
-    int SetSysConfig(system_conf_t& sys_conf);
+    int SetSysConfig(system_conf_t &sys_conf);
     int GetSysConfig(system_conf_t &sys_conf);
 
-  private: 
-    int GetLatestBatch(size_t& batch);
+  private:
+    int GetLatestBatch(size_t &batch);
     int CreateTable(const char *cmd_str, const char *table_nm);
     int UpdateMeta(size_t batch);
     int DropTable(char *tbl_nm);
     int CmdWithTrans(char *sql_str);
 };
+}
 
 #endif /* INDEXIVF_DB_H_ */

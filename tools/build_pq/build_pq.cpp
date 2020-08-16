@@ -32,7 +32,7 @@ typedef struct build_param {
     char path_learn[1024];
     size_t M;
     size_t efConstruction;
-    size_t d;
+    size_t dim;
     size_t nc;
     size_t nsubc;
     size_t code_size;
@@ -91,7 +91,7 @@ dump_conf()
     cout << "nc : " << pq_build_param.nc << endl;
     cout << "nsubc : " << pq_build_param.nsubc << endl;
     cout << "M : " << pq_build_param.M << endl;
-    cout << "d : " << pq_build_param.d << endl;
+    cout << "dim : " << pq_build_param.dim << endl;
 
     cout << "ratio_train : " << pq_build_param.ratio_train << endl;
 
@@ -186,12 +186,19 @@ get_conf(json &json_conf)
     str_v = json_conf.value("M", "");
     pq_build_param.M = atoi(str_v.c_str());
 
-    if (json_conf["d"].is_null()) {
-        cout << "d section not found in conf file" << endl;
+    if (json_conf["dim"].is_null()) {
+        cout << "dim section not found in conf file" << endl;
         return -1;
     }
-    str_v = json_conf.value("d", "");
-    pq_build_param.d = atoi(str_v.c_str());
+    str_v = json_conf.value("dim", "");
+    pq_build_param.dim = atoi(str_v.c_str());
+
+    if (json_conf["ratio_train"].is_null()) {
+        cout << "ratio_train section not found in conf file" << endl;
+        return -1;
+    }
+    str_v = json_conf.value("ratio_train", "");
+    pq_build_param.ratio_train = atof(str_v.c_str());
 
     sprintf(pq_build_param.path_edges, "%s/%lu/hnsw_M%lu_ef%lu.ivecs",
             pq_build_param.path_model,
@@ -293,12 +300,12 @@ int main(int argc, char **argv) {
     if (rc) return rc;
 
     dump_conf();
-    exit(1);
+    // exit(1);
 
     //==================
     // Initialize Index
     //==================
-    IndexIVF_HNSW_Grouping *index = new IndexIVF_HNSW_Grouping(pq_build_param.d,
+    IndexIVF_HNSW_Grouping *index = new IndexIVF_HNSW_Grouping(pq_build_param.dim,
                                                                pq_build_param.nc,
                                                                pq_build_param.code_size,
                                                                8,

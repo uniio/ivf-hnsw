@@ -14,7 +14,7 @@ using std::endl;
 
 namespace ivfhnsw {
 
-Index_DB::Index_DB(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr) {
+Index_DB::Index_DB(const char *host, uint32_t port, const char *db_nm, const char *db_usr, const char *pwd_usr) {
     sprintf(conninfo, "host=%s port=%u dbname=%s user=%s password=%s",
             host, port, db_nm, db_usr, pwd_usr);
 }
@@ -82,6 +82,12 @@ int Index_DB::GetBatchList(std::vector<batch_info_t> &batch_list) {
             batch_cur.valid = false;
         else
             batch_cur.valid = true;
+
+        sb = PQgetvalue(res, i, PQfnumber(res, "precomputed_idx"));
+        if (sb[0] == 'f' && sb[1] == '\0')
+            batch_cur.precomputed_idx = false;
+        else
+            batch_cur.precomputed_idx = true;
 
         batch_cur.batch = (size_t)atoi(PQgetvalue(res, i, PQfnumber(res, "batch")));
         batch_list.push_back(batch_cur);
@@ -186,11 +192,16 @@ int Index_DB::CmdWithTrans(char *sql_str) {
 }
 
 int Index_DB::CreateBatch(size_t batch) {
-    int rc = -1;
-    PGresult *res;
     char sql_str[512];
 
-    sprintf(sql_str, "INSERT INTO batch_info(batch, ts, valid) VALUES(%lu, NOW()::TIMESTAMP, TRUE)", batch);
+    sprintf(sql_str, "INSERT INTO batch_info(batch, ts, valid, precomputed_idx) VALUES(%lu, NOW()::TIMESTAMP, TRUE, FALSE)", batch);
+    return CmdWithTrans(sql_str);
+}
+
+int Index_DB::ActiveBatch(size_t batch) {
+    char sql_str[512];
+
+    sprintf(sql_str, "UPDATE batch_info SET precomputed_idx = TRUE WHERE batch = %lu", batch);
     return CmdWithTrans(sql_str);
 }
 

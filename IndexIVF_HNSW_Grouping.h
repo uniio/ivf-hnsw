@@ -95,6 +95,24 @@ namespace ivfhnsw {
         bool action_on_pq(char *path_out, size_t pq_ver, bool with_opq, ACTION_PQ action);
 
         /*
+         * load PQ codebooks into index
+         *
+         *  @param  sys_conf   system_orca table's configuration
+         *  @param  pq_conf    pq_conf table's record (a version of pq's config)
+         *
+        */
+        int load_pq_codebooks(system_conf_t &sys_conf, pq_conf_t &pq_conf);
+
+        /*
+         * load quantizer into index
+         *
+         *  @param  sys_conf   system_orca table's configuration
+         *  @param  pq_conf    pq_conf table's record (a version of pq's config)
+         *
+        */
+        int load_quantizer(system_conf_t &sys_conf, pq_conf_t &pq_conf);
+
+        /*
          * Build Precomputed Index file
          *
          * @param path_base base vector file full path
@@ -109,8 +127,20 @@ namespace ivfhnsw {
          * may be we cannot process vector file which has vector number more than 100W
          * caller must ensure not exceed this limit
          */
-        int build_prcomputed_index(const char *path_base,
-                                   const char *path_prcomputed_index);
+        int build_prcomputed_index(const char *path_base, const char *path_prcomputed_index);
+
+        /*
+         * Build Precomputed Index files
+         *
+         * build precomputed index for batch, which has no precomputed index
+         *
+         * @param  sys_conf      system_orca table configure
+         * @param  skip_batch    don't process given batch
+         *
+         * skip_batch used to skip given batch, that is batch which service1b current used
+         *
+         */
+        int build_prcomputed_index(system_conf_t &sys_conf, size_t skip_batch);
 
 
         /*

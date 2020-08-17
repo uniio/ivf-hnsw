@@ -16,6 +16,7 @@ namespace ivfhnsw {
 typedef struct batch_info {
     size_t batch;
     bool valid;
+    bool precomputed_idx;
 } batch_info_t;
 
 class Index_DB {
@@ -25,11 +26,26 @@ class Index_DB {
     PGconn *conn = nullptr;
 
   public:
-    explicit Index_DB(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
+    explicit Index_DB(const char *host, uint32_t port, const char *db_nm, const char *db_usr, const char *pwd_usr);
     virtual ~Index_DB();
 
     int Connect();
+
+    /*
+     *  CreateBatch used to get a new batch number used for new data
+     *
+     *  @param  batch   batch number
+     *
+     */
     int CreateBatch(size_t batch);
+
+    /*
+     *  ActiveBatch used to mark the batch, it means precomputed index for the batch is created
+     *
+     *  @param  batch   batch number
+     *
+     */
+    int ActiveBatch(size_t batch);
     int AppendPQInfo(size_t ver, bool with_opq, size_t code_size, size_t nsubc);
     int GetLatestPQInfo(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
     int AppendPQConf(pq_conf_t &pq_conf);

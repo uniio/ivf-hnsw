@@ -632,15 +632,18 @@ namespace ivfhnsw
             }
         }
         // Train OPQ rotation matrix and rotate residuals
-        if (do_opq){
+        if (do_opq) {
             faiss::OPQMatrix *matrix = new faiss::OPQMatrix(d, pq->M);
 
             std::cout << "Training OPQ Matrix" << std::endl;
+	    std::cout << "Max Training Points: " << n << std::endl;
+	    std::cout << "d: " << d << " M: " << pq->M << std::endl;
             matrix->verbose = true;
             matrix->max_train_points = n;
             matrix->niter = 100;
             matrix->train(n, train_residuals.data());
             opq_matrix = matrix;
+	    std::cout << "Training OPQ Matrix Done" << std::endl;
 
             std::vector<float> copy_train_residuals(n * d);
             memcpy(copy_train_residuals.data(), train_residuals.data(), n * d * sizeof(float));
@@ -846,6 +849,10 @@ namespace ivfhnsw
         int rc = 0;
         char path_full[1024];
         char path_ver[1024];
+        uint32_t dim;
+        size_t nvecs;
+        std::vector<float> trainvecs;
+        std::vector<float> trainvecs_rnd_subset;
 
         // Prepare output directory for store PQ files
         sprintf(path_ver, "%s/%lu", path_out, pq_ver);
@@ -856,35 +863,47 @@ namespace ivfhnsw
             }
         }
 
+        StopW stopw = StopW();
         std::cout << "Build PQ files based on learning set file: " << path_learn << std::endl;
         try {
-            uint32_t dim;
-            size_t nvecs;
             rc = get_vec_attr(path_learn, dim, nvecs);
             if (rc) return rc;
 
-            std::vector<float> trainvecs(nvecs * dim);
+            trainvecs.resize(nvecs * dim);
             {
                  std::ifstream learn_input(path_learn, std::ios::binary);
                  readXvecFvec<uint8_t>(learn_input, trainvecs.data(), dim, nvecs);
             }
-            std::cout << "Get train vector subset with vector number of: " << nvecs << std::endl;
+            std::cout << "Get train vector count: " << nvecs << std::endl;
+        } catch (...) {
+            std::cout << "Failed to get train vector" << std::endl;
+            goto err_handle;
+        }
 
-            StopW stopw = StopW();
 
+        try {
             // Set Random Subset of sub_nt trainvecs
             size_t nsubt = nvecs * rsubt;
             std::cout << "Get random subset with vector numnber of: " << nsubt << std::endl;
-            std::vector<float> trainvecs_rnd_subset(nsubt * dim);
+            trainvecs_rnd_subset.resize(nsubt * dim);
             random_subset(trainvecs.data(), trainvecs_rnd_subset.data(), dim, nvecs, nsubt);
-
             std::cout << "Done with " << (stopw.getElapsedTimeMicro() / 1000000.0) << "s" << std::endl;
+        } catch (...) {
+            std::cout << "Failed to get random subset from train vector" << std::endl;
+            goto err_handle;
+        }
 
+        try {
             stopw.reset();
             std::cout << "Training PQ codebooks ..." << std::endl;
             train_pq(nvecs, trainvecs_rnd_subset.data());
             std::cout << "Done with " << (stopw.getElapsedTimeMicro() / 1000000.0) << "s" << std::endl;
+        } catch (...) {
+            std::cout << "Failed to training PQ codebooks" << std::endl;
+            goto err_handle;
+        }
 
+        try {
             sprintf(path_full, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
             std::cout << "Saving Residual PQ codebook to " << path_full << std::endl;
             faiss::write_ProductQuantizer(pq, path_full);
@@ -899,6 +918,14 @@ namespace ivfhnsw
                 faiss::write_VectorTransform(opq_matrix, path_full);
             }
         } catch (...) {
+            std::cout << "Failed to write PQ codebooks" << std::endl;
+            goto err_handle;
+        }
+
+        goto out;
+
+err_handle:
+        {
             rc = -1;
             std::cout << "Failed when build PQ files" << std::endl;
 
@@ -911,6 +938,8 @@ namespace ivfhnsw
                 unlink(path_full);
             }
         }
+
+out:
 
         return rc;
     }
@@ -939,6 +968,96 @@ namespace ivfhnsw
         }
 
         return db_p->GetLatestPQInfo(ver, with_opq, code_size, nsubc);
+    }
+
+    // TODO: I/O error handler when read PQ codebooks from file
+    // or force core dump when failed to read pq codebooks
+    // to my understanding core dump is ok
+    int IndexIVF_HNSW_Grouping::load_pq_codebooks(system_conf_t &sys_conf, pq_conf_t &pq_conf)
+    {
+        char path_full[1024];
+
+        std::cout << "Load latest PQ files with version: " << pq_conf.ver << std::endl;
+
+        // get PQ codebook path
+        get_path_pq(sys_conf, pq_conf.ver, path_full);
+        std::cout << "Loading Residual PQ codebook from " << path_full << std::endl;
+        if (pq)
+            delete pq;
+        pq = faiss::read_ProductQuantizer(path_full);
+
+        if (pq_conf.with_opq) {
+            // get OPQ rotation matrix path
+            get_path_opq_matrix(sys_conf, pq_conf.ver, path_full);
+            std::cout << "Loading Residual OPQ rotation matrix from " << path_full << std::endl;
+            opq_matrix = dynamic_cast<faiss::LinearTransform *>(faiss::read_VectorTransform(path_full));
+        }
+
+        // get norm PQ codebook path
+        get_path_norm_pq(sys_conf, pq_conf.ver, path_full);
+        std::cout << "Loading Norm PQ codebook from " << path_full << std::endl;
+        if (norm_pq)
+            delete norm_pq;
+        norm_pq = faiss::read_ProductQuantizer(path_full);
+
+        return 0;
+    }
+
+    /*
+     * load quantizer into index
+     *
+     *  @param  sys_conf   system_orca table's configuration
+     *  @param  pq_conf    pq_conf table's record (a version of pq's config)
+     *
+     * two case:
+     *
+     * 1:  centroids file, info file, edges file exists
+     *     Load file content, and build quantizer in memory
+     *
+     * 2: info file, edges file not exists
+     *     build quantizer in memory with centroids file
+     *     and generate info file and edges file
+     *
+    */
+    int IndexIVF_HNSW_Grouping::load_quantizer(system_conf_t &sys_conf, pq_conf_t &pq_conf)
+    {
+        char path_centroids[1024], path_info[1024], path_edges[1024];
+
+        get_path_centroids(sys_conf, path_centroids);
+        get_path_info(sys_conf, pq_conf, path_info);
+        get_path_edges(sys_conf, pq_conf, path_edges);
+
+        // TODO: mocify following function, force core dump when failed to build quantizer
+        build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
+    }
+
+    int IndexIVF_HNSW_Grouping::build_prcomputed_index(system_conf_t &sys_conf, size_t skip_batch)
+    {
+        std::vector<batch_info_t> batch_list;
+        char path_vector[1024], path_precomputed_idx[1024];
+        int rc;
+
+        rc = db_p->GetBatchList(batch_list);
+        size_t sz = batch_list.size();
+        for (auto i = 0; i < sz; i++) {
+            auto a_batch = batch_list[i];
+
+            if (a_batch.batch == skip_batch)
+                continue;
+
+            if (a_batch.valid == false || a_batch.precomputed_idx == true)
+                continue;
+
+            get_path_vector(sys_conf, a_batch.batch, path_vector);
+            get_path_precomputed_idx(sys_conf, a_batch.batch, path_precomputed_idx);
+            rc = build_prcomputed_index(path_vector, path_precomputed_idx);
+            if (rc) {
+                std::cout << "Failed to build precomputing index for batch: " <<  a_batch.batch << std::endl;
+                return rc;
+            }
+        }
+
+        return 0;
     }
 
     int IndexIVF_HNSW_Grouping::build_prcomputed_index(const char *path_base, const char *path_prcomputed_index)

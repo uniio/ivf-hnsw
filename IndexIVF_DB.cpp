@@ -105,43 +105,43 @@ int Index_DB::GetLatestBatch(size_t &batch) {
     if (rc)
         return rc;
 
-    batch = batch_list[0].batch;
+    if (batch_list.size() != 0)
+        batch = batch_list[0].batch;
+    else
+        batch = 0;
+
+    return 0;
 }
 
 int Index_DB::SetSysConfig(system_conf_t &sys_conf) {
     PGresult *res;
     char sql_str[1024];
 
-    sprintf(sql_str, "INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsubc, code_size) VALUES(%s, %s, %lu, %lu, %lu, %lu, %lu)",
-            sys_conf.path_base_data, sys_conf.path_base_model, sys_conf.batch_max, sys_conf.dim, sys_conf.nc, sys_conf.nsubc, sys_conf.code_size);
+    sprintf(sql_str, "INSERT INTO system_orca(path_base_data, path_base_model, batch_max, \
+            dim, nc, nsubc, code_size, nprobe, max_codes, efSearch, do_pruning) \
+            VALUES(%s, %s, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu)",
+            sys_conf.path_base_data, sys_conf.path_base_model, sys_conf.batch_max,
+            sys_conf.dim, sys_conf.nc, sys_conf.nsubc, sys_conf.code_size,
+            sys_conf.nprobe, sys_conf.max_codes, sys_conf.efSearch, sys_conf.do_pruning);
     std::cout << "Setup path info with SQL: " << sql_str << std::endl;
     return CmdWithTrans(sql_str);
 }
 
 int Index_DB::GetSysConfig(system_conf_t &sys_conf) {
     PGresult *res;
+    int rc = -1;
+    int nRows;
 
-    res = PQexec(conn, "DECLARE mycursor CURSOR FOR SELECT * FROM system_orca");
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        std::cout << "DECLARE CURSOR failed: " << PQerrorMessage(conn) << std::endl;
-        PQclear(res);
-        return -1;
-    }
-    PQclear(res);
-
-    // get all result from database
-    res = PQexec(conn, "FETCH ALL in mycursor");
+    res = PQexec(conn, "SELECT * FROM system_orca");
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-        std::cout << "FETCH ALL failed: " << PQerrorMessage(conn) << std::endl;
-        PQclear(res);
-        return -1;
+        std::cout << "Failed to retrieve data from system_orca table: " << PQerrorMessage(conn) << std::endl;
+        goto out;
     }
 
-    int nRows = PQntuples(res);
+    nRows = PQntuples(res);
     if (nRows == 0) {
         std::cout << "system_orca table is empty, BUG" << std::endl;
-        PQclear(res);
-        return -1;
+        goto out;
     }
 
     strcpy(sys_conf.path_base_data, PQgetvalue(res, 0, PQfnumber(res, "path_base_data")));
@@ -151,6 +151,12 @@ int Index_DB::GetSysConfig(system_conf_t &sys_conf) {
     sys_conf.nc = atoi(PQgetvalue(res, 0, PQfnumber(res, "nc")));
     sys_conf.nsubc = atoi(PQgetvalue(res, 0, PQfnumber(res, "nsubc")));
     sys_conf.code_size = atoi(PQgetvalue(res, 0, PQfnumber(res, "code_size")));
+    sys_conf.nprobe    = atoi(PQgetvalue(res, 0, PQfnumber(res, "nprobe")));
+    sys_conf.max_codes = atoi(PQgetvalue(res, 0, PQfnumber(res, "max_codes")));
+    sys_conf.efSearch  = atoi(PQgetvalue(res, 0, PQfnumber(res, "efSearch")));
+    sys_conf.do_pruning = atoi(PQgetvalue(res, 0, PQfnumber(res, "do_pruning")));
+
+out:
     PQclear(res);
 
     return 0;
@@ -170,7 +176,6 @@ int Index_DB::CmdWithTrans(char *sql_str) {
     PQclear(res);
 
     res = PQexec(conn, sql_str);
-    cout << "INSERT result: " << PQresultStatus(res) << endl;
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         cout << "Failed to execute command: " << sql_str << endl;
         std::cout << "Error of: " << PQerrorMessage(conn) << std::endl;

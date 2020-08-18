@@ -58,8 +58,9 @@ class Index_DB {
     int SetSysConfig(system_conf_t &sys_conf);
     int GetSysConfig(system_conf_t &sys_conf);
 
-  private:
     int GetLatestBatch(size_t &batch);
+
+  private:
     int DropTable(char *tbl_nm);
     int CmdWithTrans(char *sql_str);
 };

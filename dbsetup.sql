@@ -5,13 +5,17 @@
 */
 
 CREATE TABLE IF NOT EXISTS system_orca (
-    path_base_data CHARACTER(1024) NOT NULL,
-    path_base_model CHARACTER(1024) NOT NULL,
+    path_base_data VARCHAR(1024) NOT NULL,
+    path_base_model VARCHAR(1024) NOT NULL,
     batch_max INTEGER NOT NULL,
     dim INTEGER NOT NULL,
     nc INTEGER NOT NULL,
     nsubc INTEGER NOT NULL,
-    code_size INTEGER NOT NULL
+    code_size INTEGER NOT NULL,
+    nprobe INTEGER NOT NULL,
+    max_codes INTEGER NOT NULL,
+    efSearch INTEGER NOT NULL,
+    do_pruning INTEGER NOT NULL
 );
 
 /*
@@ -59,7 +63,7 @@ CREATE TABLE IF NOT EXISTS pq_conf (
 /*
   Setup system_orca table
 */
-INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsubc, code_size) VALUES('/mnt/hdd_strip/SIFT1B/data', '/mnt/hdd_strip/SIFT1B/model', 1000, 128, 993127, 64, 16);
+INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsubc, code_size, nprobe, max_codes, efSearch, do_pruning) VALUES('/mnt/hdd_strip/SIFT1B/data', '/mnt/hdd_strip/SIFT1B/model', 1000, 128, 993127, 64, 16, 32, 10000, 80, 1);
 
 /*
   Setup pq_conf table

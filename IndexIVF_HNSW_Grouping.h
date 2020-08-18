@@ -155,8 +155,33 @@ namespace ivfhnsw {
          * -1  error happend in progress of build index file
          *
          */
-        int build_batchs_to_index(const char *path_base, const size_t batch_begin, const size_t batch_end);
+        int build_batchs_to_index(const system_conf_t &sys_conf, const size_t batch_begin, const size_t batch_end);
 
+        /*
+         * Build Index file with given batchs of data
+         *
+         * @param sys_conf  system conf
+         * @param batch_list  list of batch number
+         *
+         * return value:
+         *  0  success build index file
+         * -1  error happend in progress of build index file
+         *
+         */
+        int build_batchs_to_index(const system_conf_t &sys_conf, std::vector<size_t> &batch_list);
+
+        /*
+         * Build Index file with given batchs of data
+         *
+         * @param sys_conf  system conf
+         * @param batch_list  list of valid batch info
+         *
+         * return value:
+         *  0  success build index file
+         * -1  error happend in progress of build index file
+         *
+         */
+        int build_batchs_to_index(const system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list);
         /*
          * Add vectors in a batch file into index
          *
@@ -168,7 +193,7 @@ namespace ivfhnsw {
          * -1  failed to add the batch vector
          *
          */
-        int add_one_batch_vector(const char *path_base, const char *path_precomputed_idx);
+        int add_one_batch_to_index(const char *path_base, const char *path_precomputed_idx);
         void get_path_index(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
         int save_index(const system_conf_t sys_conf, const size_t idx_ver);
 

@@ -854,6 +854,16 @@ namespace ivfhnsw
         std::vector<float> trainvecs;
         std::vector<float> trainvecs_rnd_subset;
 
+        if (pq_ver == 0) {
+            std::cout << "Invalid PQ version 0" << std::endl;
+            return -1;
+        }
+
+        if (rsubt < 0.0000001) {
+            std::cout << "Invalid sub set ratio in training PQ: " << rsubt << std::endl;
+            return -1;
+        }
+
         // Prepare output directory for store PQ files
         sprintf(path_ver, "%s/%lu", path_out, pq_ver);
         if (!exists(path_ver)) {
@@ -982,23 +992,42 @@ out:
         // get PQ codebook path
         get_path_pq(sys_conf, pq_conf.ver, path_full);
         std::cout << "Loading Residual PQ codebook from " << path_full << std::endl;
-        if (pq)
-            delete pq;
-        pq = faiss::read_ProductQuantizer(path_full);
+        try {
+            if (pq)
+                delete pq;
+            pq = faiss::read_ProductQuantizer(path_full);
+            std::cout << "Finish Load Residual PQ codebook: " << path_full << std::endl;
+        } catch (...) {
+            std::cout << "Failed to Load Residual PQ codebook: " << path_full << std::endl;
+            return -1;
+        }
+
 
         if (pq_conf.with_opq) {
             // get OPQ rotation matrix path
             get_path_opq_matrix(sys_conf, pq_conf.ver, path_full);
             std::cout << "Loading Residual OPQ rotation matrix from " << path_full << std::endl;
-            opq_matrix = dynamic_cast<faiss::LinearTransform *>(faiss::read_VectorTransform(path_full));
+            try {
+                opq_matrix = dynamic_cast<faiss::LinearTransform *>(faiss::read_VectorTransform(path_full));
+                std::cout << "Finish Load Residual OPQ rotation matrix: " << path_full << std::endl;
+            } catch (...) {
+                std::cout << "Failed to Load Residual OPQ rotation matrix: " << path_full << std::endl;
+                return -1;
+            }
         }
 
         // get norm PQ codebook path
         get_path_norm_pq(sys_conf, pq_conf.ver, path_full);
         std::cout << "Loading Norm PQ codebook from " << path_full << std::endl;
-        if (norm_pq)
-            delete norm_pq;
-        norm_pq = faiss::read_ProductQuantizer(path_full);
+        try {
+            if (norm_pq)
+                delete norm_pq;
+            norm_pq = faiss::read_ProductQuantizer(path_full);
+            std::cout << "Finsh Load Norm PQ codebook: " << path_full << std::endl;
+        } catch (...) {
+            std::cout << "Failed to Load Norm PQ codebook: " << path_full << std::endl;
+            return -1;
+        }
 
         return 0;
     }
@@ -1133,7 +1162,7 @@ out:
         return rc;
     }
 
-    int IndexIVF_HNSW_Grouping::add_one_batch_vector(const char *path_vector,
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const char *path_vector,
                                                      const char *path_precomputed_idx)
     {
         const size_t batch_size_max = 1000000;
@@ -1315,21 +1344,38 @@ out:
         return write(path_index, true);
     }
 
-    int IndexIVF_HNSW_Grouping::build_batchs_to_index(const char *path_base,
-                                            const size_t batch_begin,
-                                            const size_t batch_end)
+    int IndexIVF_HNSW_Grouping::build_batchs_to_index(const system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list)
+    {
+        std::vector<size_t> b_list(0);
+        auto sz = b_list.size();
+        for (size_t i = 0; i < sz; i++) {
+            if (batch_list[i].precomputed_idx == false) {
+                char path_vector[1024], path_precomputed_idx[1024];
+                // batch vector has no precomputed index, build it first
+                get_path_vector(sys_conf, batch_list[i].batch, path_vector);
+                get_path_precomputed_idx(sys_conf, batch_list[i].batch, path_vector);
+                std::cout << "Build precomputed index for vector of batch: " << batch_list[i].batch << std::endl;
+                int rc = build_prcomputed_index(path_vector, path_precomputed_idx);
+            }
+            b_list.push_back(batch_list[i].batch);
+        }
+
+        return build_batchs_to_index(sys_conf, b_list);
+    }
+
+    int IndexIVF_HNSW_Grouping::build_batchs_to_index(const system_conf_t &sys_conf, std::vector<size_t> &batch_list)
     {
         char path_vector[1024];
         char path_precomputed_idx[1024];
-        int rc;
+        int  rc;
 
-        std::cout << "Build index for vector from batch: " << batch_begin << " to batch: " << batch_end << std::endl;
-        for (size_t i = batch_begin; i <= batch_end; i++) {
+        auto sz = batch_list.size();
+        for (size_t i = i; i < sz; i++) {
             // get vector file path and precomputed index file path
-            sprintf(path_vector, "%s/bigann_base_%lu.bvecs", path_base, i);
-            sprintf(path_precomputed_idx, "%s/precomputed_idxs_%lu.ivecs", path_base, i);
+            sprintf(path_vector, "%s/bigann_base_%lu.bvecs", sys_conf.path_base_data, batch_list[i]);
+            sprintf(path_precomputed_idx, "%s/precomputed_idxs_%lu.ivecs", sys_conf.path_base_data, batch_list[i]);
 
-            rc = add_one_batch_vector(path_vector, path_precomputed_idx);
+            rc = add_one_batch_to_index(path_vector, path_precomputed_idx);
             if (rc) {
                 std::cout << "Failed to add vector from file: " << path_vector << " to index" << std::endl;
                 return -1;
@@ -1339,13 +1385,25 @@ out:
         return 0;
     }
 
+    int IndexIVF_HNSW_Grouping::build_batchs_to_index(const system_conf_t &sys_conf,
+                                            const size_t batch_begin,
+                                            const size_t batch_end)
+    {
+        std::cout << "Build index for vector from batch: " << batch_begin << " to batch: " << batch_end << std::endl;
+        std::vector<size_t> batch_list(0);
+        for (size_t i = batch_begin; i <= batch_end; i++)
+            batch_list.push_back(i);
+
+        return build_batchs_to_index(sys_conf, batch_list);
+    }
+
     int IndexIVF_HNSW_Grouping::build_index(const system_conf_t sys_conf,
                                             const size_t batch_begin,
                                             const size_t batch_end,
                                             const size_t index_ver)
     {
         int rc;
-        rc = build_batchs_to_index(sys_conf.path_base_data, batch_begin, batch_end);
+        rc = build_batchs_to_index(sys_conf, batch_begin, batch_end);
         if (rc) {
             // don't need to output message, already have in calling function
             return rc;

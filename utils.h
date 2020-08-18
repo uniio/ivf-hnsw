@@ -209,6 +209,10 @@ namespace ivfhnsw {
         size_t  nc;
         size_t  nsubc;
         size_t  code_size;
+        size_t  nprobe;
+        size_t  max_codes;
+        size_t  efSearch;
+        size_t  do_pruning;
     } system_conf_t;
 
     typedef struct pq_conf {

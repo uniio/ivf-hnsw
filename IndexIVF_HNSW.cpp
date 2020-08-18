@@ -34,6 +34,24 @@ namespace ivfhnsw {
         if (opq_matrix) delete opq_matrix;
     }
 
+    int IndexIVF_HNSW::build_quantizer(const char* path_data, const char* path_info,
+                                        const char* path_edges, size_t M,
+                                        size_t efConstruction, bool rebuild)
+    {
+        if (rebuild) {
+            unlink(path_info);
+            unlink(path_edges);
+
+            if (exists(path_info) && exists(path_edges)) {
+                std::cout << "Can not remove previous quantizer files" << std::endl;
+                return -1;
+            }
+        }
+
+        build_quantizer(path_data, path_info, path_edges, M, efConstruction);
+        return 0;
+    }
+
     /**
      * There has been removed parallel HNSW construction in order to make internal
      * centroid ids equal to external ones.
@@ -41,7 +59,8 @@ namespace ivfhnsw {
      * on Intel Xeon E5-2650 V2 2.60GHz.
      */
     void IndexIVF_HNSW::build_quantizer(const char *path_data, const char *path_info,
-                                        const char *path_edges, size_t M, size_t efConstruction)
+                                        const char *path_edges, size_t M,
+                                        size_t efConstruction)
     {
         hdr_idx.efConstruction = efConstruction;
 

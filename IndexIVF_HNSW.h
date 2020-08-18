@@ -97,9 +97,15 @@ namespace ivfhnsw {
           * @param path_edges          path to edges for HNSW
           * @param M                   min number of edges per point, default: 16
           * @param efConstruction      max number of candidate vertices in queue to observe, default: 500
+          *
+          * @param rebuild             whether rebuild quantizer, rebuild means remove previous quantizer files
+          *                            and generate new quantizer files
         */
         void build_quantizer(const char *path_data, const char *path_info, const char *path_edges,
                              size_t M=16, size_t efConstruction = 500);
+
+        int build_quantizer(const char *path_data, const char *path_info, const char *path_edges,
+                             size_t M, size_t efConstruction, bool rebuild);
 
         /** Return the indices of the k HNSW vertices closest to the query x.
           *

@@ -29,6 +29,11 @@ int main(int argc, char **argv) {
     // Initialize database interface
     // Following code is 1st start point in service, get work path first
     Index_DB* db_p = new Index_DB("localhost", 5432, "servicedb", "postgres", "postgres");
+    rc = db_p->Connect();
+    if (rc) {
+        std::cout << "Failed to connect to Database server" << std::endl;
+        exit(1);
+    }
     rc   = db_p->GetSysConfig(sys_conf);
     if (rc) {
         std::cout << "Failed to get system configuration" << std::endl;

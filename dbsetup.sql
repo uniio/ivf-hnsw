@@ -4,9 +4,13 @@
   valid indicate the batch data is valid or invalid
 */
 
+/*
+ * TEXT type is best here, if use VARCHAR, we cant copy PQgetvalue result to destination
+ * otherwise, it will trigger error: "*** buffer overflow detected ***: terminated"
+*/
 CREATE TABLE IF NOT EXISTS system_orca (
-    path_base_data VARCHAR(1024) NOT NULL,
-    path_base_model VARCHAR(1024) NOT NULL,
+    path_base_data TEXT NOT NULL,
+    path_base_model TEXT NOT NULL,
     batch_max INTEGER NOT NULL,
     dim INTEGER NOT NULL,
     nc INTEGER NOT NULL,
@@ -63,7 +67,7 @@ CREATE TABLE IF NOT EXISTS pq_conf (
 /*
   Setup system_orca table
 */
-INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsubc, code_size, nprobe, max_codes, efSearch, do_pruning) VALUES('/mnt/hdd_strip/SIFT1B/data', '/mnt/hdd_strip/SIFT1B/model', 1000, 128, 993127, 64, 16, 32, 10000, 80, 1);
+INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsubc, code_size, nprobe, max_codes, efSearch, do_pruning) VALUES('/mnt/hdd_strip/orcv_search/data', '/mnt/hdd_strip/orcv_search/models', 1000, 128, 993127, 64, 16, 32, 10000, 80, 1);
 
 /*
   Setup pq_conf table

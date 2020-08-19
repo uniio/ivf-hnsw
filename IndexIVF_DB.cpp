@@ -337,6 +337,8 @@ int Index_DB::GetLatestPQConf(pq_conf_t &pq_conf) {
 
         pq_conf.M = atoi(PQgetvalue(res, 0, PQfnumber(res, "M")));
         pq_conf.efConstruction = atoi(PQgetvalue(res, 0, PQfnumber(res, "efConstruction")));
+        pq_conf.nt = atoi(PQgetvalue(res, 0, PQfnumber(res, "nt")));
+        pq_conf.nsubt = atoi(PQgetvalue(res, 0, PQfnumber(res, "nsubt")));
     }
     PQclear(res);
 

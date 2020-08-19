@@ -47,21 +47,28 @@ CREATE TABLE IF NOT EXISTS index_info (
 /*
   ver is version of the PQ files
   with_opq is enable/disable opq encoding when build PQ files
-  code_size is code size per vector in bytes
   nsubc is number of subcentroids per group
 */
 CREATE TABLE IF NOT EXISTS pq_info (
     ver INTEGER NOT NULL,
     with_opq BOOLEAN NOT NULL,
-    code_size INTEGER NOT NULL,
     nsubc INTEGER NOT NULL
 );
 
+/*
+  ver is version of build PQ configuration
+  with_opq is enable/disable opq encoding when build PQ files
+  M is Min number of edges per point when build PQ
+  nt is number of training vector
+  nsubt is number of learn vectors to train (random subset of the learn set)
+*/
 CREATE TABLE IF NOT EXISTS pq_conf (
     ver INTEGER NOT NULL,
     with_opq BOOLEAN NOT NULL,
     M INTEGER NOT NULL,
-    efConstruction INTEGER NOT NULL
+    efConstruction INTEGER NOT NULL,
+    nt INTEGER NOT NULL,
+    nsubt INTEGER NOT NULL
 );
 
 /*
@@ -72,4 +79,4 @@ INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsu
 /*
   Setup pq_conf table
 */
-INSERT INTO pq_conf(ver, with_opq, M, efConstruction) VALUES(1, TRUE, 16, 210);
+INSERT INTO pq_conf(ver, with_opq, M, efConstruction, nt, nsubt) VALUES(1, TRUE, 16, 210, 10000000, 262144);

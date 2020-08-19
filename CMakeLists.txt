@@ -19,7 +19,8 @@ file(GLOB ivf-hnsw_cpu_cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_library(ivf-hnsw STATIC ${ivf-hnsw_cpu_headers} ${ivf-hnsw_cpu_cpp})
 
-SET( CMAKE_CXX_FLAGS  "-Ofast -lrt -DNDEBUG -std=c++11 -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0" )
+# SET( CMAKE_CXX_FLAGS  "-Ofast -lrt -DNDEBUG -std=c++11 -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0" )
+SET( CMAKE_CXX_FLAGS  "-O2 -g -lrt -DNDEBUG -std=c++11 -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0" )
 target_link_libraries(ivf-hnsw faiss hnswlib pq)
 
 # build tests

@@ -76,21 +76,31 @@ namespace ivfhnsw {
         /*
          * Build PQ files
          *
-         * @param path_learn  learn vector file full path
-         * @param path_out    directory to store PQ files generated
-         * @param pq_ver    version of PQ
-         * @param with_opq    enable opq or not
-         * @param code_size   Code size per vector in bytes
-         * @param rsubt       ratio of vectors in learn vector file to train
-         * @param nsubc       number of subcentroids per group
+         * @param path_learn    learn vector file full path
+         * @param path_out      directory to store PQ files generated
+         * @param pq_ver        version of PQ
+         * @param with_opq      enable opq or not
+         * @param code_size     code size per vector in bytes
+         * @param n_train       number of learn vectors
+         * @param n_sub_train   number of learn vectors to train (random subset of the learn set)
+         * @param nsubc         number of subcentroids per group
          *
          */
         int build_pq_files(const char *path_learn, const char *path_out,
         		size_t pq_ver,
-                bool with_opq, size_t code_size, double rsubt, size_t nsubc);
+                bool with_opq, size_t code_size, 
+                size_t n_train, size_t n_sub_train, size_t nsubc);
 
-        int append_pq_info(size_t ver, bool with_opq, size_t code_size, size_t nsubc);
-        int get_latest_pq_info(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
+        /*
+         * build PQ codebooks
+         *
+         *  @param  sys_conf   system_orca table's configuration
+         *  @param  pq_conf    pq_conf table's record (a version of pq's config)
+         *
+         */
+        int build_pq_files(system_conf_t &sys_conf, pq_conf_t &pq_conf);
+
+        int append_pq_info(system_conf_t &sys_conf, pq_conf_t &pq_conf);
 
         bool action_on_pq(char *path_out, size_t pq_ver, bool with_opq, ACTION_PQ action);
 

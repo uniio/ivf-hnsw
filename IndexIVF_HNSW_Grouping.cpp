@@ -810,10 +810,10 @@ namespace ivfhnsw
         return (group_denominator > 0) ? group_numerator / group_denominator : 0.0;
     }
 
-    bool IndexIVF_HNSW_Grouping::action_on_pq(char *path_out, size_t pq_ver, bool with_opq, ACTION_PQ action)
+    bool IndexIVF_HNSW_Grouping::action_on_pq(char *path_model, size_t pq_ver, bool with_opq, ACTION_PQ action)
     {
         char path_ver[1024], path_full[1024];
-        sprintf(path_ver, "%s/%lu", path_out, pq_ver);
+        sprintf(path_ver, "%s/%lu", path_model, pq_ver);
 
         sprintf(path_full, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
         if (action == ACTION_PQ::PQ_CHECK) {
@@ -841,10 +841,22 @@ namespace ivfhnsw
         return true;
     }
 
-    int IndexIVF_HNSW_Grouping::build_pq_files(const char *path_learn, const char *path_out,
+    int IndexIVF_HNSW_Grouping::build_pq_files(system_conf_t &sys_conf, pq_conf_t &pq_conf)
+    {
+        char path_learn[1024], path_model[1024];
+
+        sprintf(path_learn, "%s/%s", sys_conf.path_base_data, "bigann_learn.bvecs");
+        strcpy(path_model, sys_conf.path_base_model);
+
+        return build_pq_files(path_learn, path_model, pq_conf.ver, pq_conf.with_opq, 
+                              sys_conf.code_size, pq_conf.nt, pq_conf.nsubt, 
+                              sys_conf.nsubc);
+    }
+
+    int IndexIVF_HNSW_Grouping::build_pq_files(const char *path_learn, const char *path_model,
                                                size_t pq_ver,
                                                bool with_opq, size_t code_size,
-                                               double rsubt, size_t nsubc)
+                                               size_t n_train, size_t n_sub_train, size_t nsubc)
     {
         int rc = 0;
         char path_full[1024];
@@ -859,13 +871,8 @@ namespace ivfhnsw
             return -1;
         }
 
-        if (rsubt < 0.0000001) {
-            std::cout << "Invalid sub set ratio in training PQ: " << rsubt << std::endl;
-            return -1;
-        }
-
         // Prepare output directory for store PQ files
-        sprintf(path_ver, "%s/%lu", path_out, pq_ver);
+        sprintf(path_ver, "%s/%lu", path_model, pq_ver);
         if (!exists(path_ver)) {
             if (mkdir_p(path_ver, 0755)) {
                 std::cout << "Failed to create directory: " << path_ver << std::endl;
@@ -878,6 +885,13 @@ namespace ivfhnsw
         try {
             rc = get_vec_attr(path_learn, dim, nvecs);
             if (rc) return rc;
+
+            if (nvecs < n_train) {
+                std::cout << "No enough train vector in file: " << path_learn << std::endl;
+                return -1;
+            } else {
+                nvecs = n_train;
+            }
 
             trainvecs.resize(nvecs * dim);
             {
@@ -893,10 +907,9 @@ namespace ivfhnsw
 
         try {
             // Set Random Subset of sub_nt trainvecs
-            size_t nsubt = nvecs * rsubt;
-            std::cout << "Get random subset with vector numnber of: " << nsubt << std::endl;
-            trainvecs_rnd_subset.resize(nsubt * dim);
-            random_subset(trainvecs.data(), trainvecs_rnd_subset.data(), dim, nvecs, nsubt);
+            std::cout << "Get random subset with vector numnber of: " << n_sub_train << std::endl;
+            trainvecs_rnd_subset.resize(n_sub_train * dim);
+            random_subset(trainvecs.data(), trainvecs_rnd_subset.data(), dim, nvecs, n_sub_train);
             std::cout << "Done with " << (stopw.getElapsedTimeMicro() / 1000000.0) << "s" << std::endl;
         } catch (...) {
             std::cout << "Failed to get random subset from train vector" << std::endl;
@@ -950,11 +963,10 @@ err_handle:
         }
 
 out:
-
         return rc;
     }
 
-    int IndexIVF_HNSW_Grouping::append_pq_info(size_t ver, bool with_opq, size_t code_size, size_t nsubc)
+    int IndexIVF_HNSW_Grouping::append_pq_info(system_conf_t &sys_conf, pq_conf_t &pq_conf)
     {
         int rc;
 
@@ -964,20 +976,7 @@ out:
             return rc;
         }
 
-        return db_p->AppendPQInfo(ver, with_opq, code_size, nsubc);
-    }
-
-    int IndexIVF_HNSW_Grouping::get_latest_pq_info(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc)
-    {
-        int rc;
-
-        rc = prepare_db();
-        if (rc) {
-            std::cout << "Failed to prepare database" << std::endl;
-            return rc;
-        }
-
-        return db_p->GetLatestPQInfo(ver, with_opq, code_size, nsubc);
+        return db_p->AppendPQInfo(pq_conf.ver, pq_conf.with_opq, sys_conf.code_size, sys_conf.nsubc);
     }
 
     // TODO: I/O error handler when read PQ codebooks from file

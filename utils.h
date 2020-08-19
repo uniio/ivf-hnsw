@@ -217,9 +217,11 @@ namespace ivfhnsw {
 
     typedef struct pq_conf {
         size_t ver;
-        bool with_opq;
+        bool   with_opq;
         size_t M;
         size_t efConstruction;
+        size_t nt;
+        size_t nsubt;
     } pq_conf_t;
 }
 #endif //IVF_HNSW_LIB_UTILS_H

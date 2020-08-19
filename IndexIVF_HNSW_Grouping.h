@@ -87,9 +87,8 @@ namespace ivfhnsw {
          *
          */
         int build_pq_files(const char *path_learn, const char *path_out,
-        		size_t pq_ver,
-                bool with_opq, size_t code_size, 
-                size_t n_train, size_t n_sub_train, size_t nsubc);
+                           size_t pq_ver, bool with_opq, size_t code_size,
+                           size_t n_train, size_t n_sub_train, size_t nsubc);
 
         /*
          * build PQ codebooks

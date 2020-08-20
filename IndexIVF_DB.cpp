@@ -58,18 +58,9 @@ int Index_DB::DropTable(char *tbl_nm) {
 int Index_DB::GetBatchList(std::vector<batch_info_t> &batch_list) {
     PGresult *res;
 
-    res = PQexec(conn, "DECLARE mycursor CURSOR FOR SELECT * FROM batch_info ORDER BY batch DESC");
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        std::cout << "DECLARE CURSOR failed: " << PQerrorMessage(conn) << std::endl;
-        PQclear(res);
-        return -1;
-    }
-    PQclear(res);
-
-    // get all result from database
-    res = PQexec(conn, "FETCH ALL in mycursor");
+    res = PQexec(conn, "SELECT * FROM batch_info ORDER BY batch ASC");
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-        std::cout << "FETCH ALL failed: " << PQerrorMessage(conn) << std::endl;
+        std::cout << "Failed to get data from batch_info table: " << PQerrorMessage(conn) << std::endl;
         PQclear(res);
         return -1;
     }
@@ -77,17 +68,26 @@ int Index_DB::GetBatchList(std::vector<batch_info_t> &batch_list) {
     int nRows = PQntuples(res);
     for (int i = 0; i < nRows; i++) {
         batch_info_t batch_cur;
-        char *sb = PQgetvalue(res, i, PQfnumber(res, "valid"));
+        char* sb = PQgetvalue(res, i, PQfnumber(res, "ts"));
+        if (!sb) {
+            std::cout << "Invalid record in batch_info for batch: " << i << std::endl;
+            return -1;
+        }
+        struct tm tm_time;
+        strptime(sb, "%Y-%m-%d %H:%M:%S", &tm_time);
+        batch_cur.ts = mktime(&tm_time);
+
+        sb = PQgetvalue(res, i, PQfnumber(res, "no_precomputed_idx"));
+        if (sb[0] == 'f' && sb[1] == '\0')
+            batch_cur.no_precomputed_idx = false;
+        else
+            batch_cur.no_precomputed_idx = true;
+
+        sb = PQgetvalue(res, i, PQfnumber(res, "valid"));
         if (sb[0] == 'f' && sb[1] == '\0')
             batch_cur.valid = false;
         else
             batch_cur.valid = true;
-
-        sb = PQgetvalue(res, i, PQfnumber(res, "precomputed_idx"));
-        if (sb[0] == 'f' && sb[1] == '\0')
-            batch_cur.precomputed_idx = false;
-        else
-            batch_cur.precomputed_idx = true;
 
         batch_cur.batch = (size_t)atoi(PQgetvalue(res, i, PQfnumber(res, "batch")));
         batch_list.push_back(batch_cur);
@@ -106,7 +106,7 @@ int Index_DB::GetLatestBatch(size_t &batch) {
         return rc;
 
     if (batch_list.size() != 0)
-        batch = batch_list[0].batch;
+        batch = batch_list[batch_list.size() - 1].batch;
     else
         batch = 0;
 

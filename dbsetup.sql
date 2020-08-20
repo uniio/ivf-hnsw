@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS system_orca (
 CREATE TABLE IF NOT EXISTS batch_info (
     batch INTEGER NOT NULL,
     ts TIMESTAMP NOT NULL,
-    valid BOOLEAN NOT NULL
+    valid BOOLEAN NOT NULL,
+    no_precomputed_idx BOOLEAN NOT NULL
 );
 
 /*
@@ -80,3 +81,13 @@ INSERT INTO system_orca(path_base_data, path_base_model, batch_max, dim, nc, nsu
   Setup pq_conf table
 */
 INSERT INTO pq_conf(ver, with_opq, M, efConstruction, nt, nsubt) VALUES(1, TRUE, 16, 210, 10000000, 262144);
+
+/*
+  Setup batch_info table, which will be used by precomputed index build
+*/
+INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(1, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(2, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(3, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(4, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(5, current_timestamp, TRUE, TRUE);

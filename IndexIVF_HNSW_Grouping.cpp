@@ -1074,11 +1074,12 @@ out:
             if (a_batch.batch == skip_batch)
                 continue;
 
-            if (a_batch.valid == false || a_batch.precomputed_idx == true)
+            if (a_batch.valid == false || a_batch.no_precomputed_idx == false)
                 continue;
 
             get_path_vector(sys_conf, a_batch.batch, path_vector);
             get_path_precomputed_idx(sys_conf, a_batch.batch, path_precomputed_idx);
+            std::cout << "Build precomputed index for vector: " <<  path_vector << std::endl;
             rc = build_prcomputed_index(path_vector, path_precomputed_idx);
             if (rc) {
                 std::cout << "Failed to build precomputing index for batch: " <<  a_batch.batch << std::endl;
@@ -1098,7 +1099,6 @@ out:
         rc = get_vec_attr(path_base, dim, nvecs);
         if (rc) return rc;
 
-        std::cout << "Build precomputing indices" << std::endl;
         StopW stopw = StopW();
 
         std::ifstream input(path_base, std::ios::binary);
@@ -1300,20 +1300,20 @@ out:
     }
 
     void IndexIVF_HNSW_Grouping::get_path_vector(const system_conf_t sys_conf, const size_t batch_idx, char *path_vector) {
-        // TODO: current code assume maximize batch index number is 100
-        // change format 02lu to 03lu etc. when use bigger batch index number
-        sprintf(path_vector, "%s/bigann_base_%02lu.bvecs",
-                sys_conf.path_base_model, batch_idx);
+        // TODO: current code assume maximize batch index number is 1000
+        // that's why we use 03lu here
+        sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs",
+                sys_conf.path_base_data, batch_idx);
     }
 
     void IndexIVF_HNSW_Grouping::get_path_precomputed_idx(const system_conf_t sys_conf, 
                                                           const size_t batch_idx,
                                                           char* path_precomputed_idx )
     {
-        // TODO: current code assume maximize batch index number is 100
-        // change format 02lu to 03lu etc. when use bigger batch index number
+        // TODO: current code assume maximize batch index number is 1000
+        // that's why we use 03lu here
         sprintf(path_precomputed_idx,
-                "%s/precomputed_idxs_sift1b_%02lu.ivecs",
+                "%s/split_1000/precomputed_idxs_sift1b_%03lu.ivecs",
                 sys_conf.path_base_data,
                 batch_idx);
     }
@@ -1349,7 +1349,7 @@ out:
         std::vector<size_t> b_list(0);
         auto sz = b_list.size();
         for (size_t i = 0; i < sz; i++) {
-            if (batch_list[i].precomputed_idx == false) {
+            if (batch_list[i].no_precomputed_idx) {
                 char path_vector[1024], path_precomputed_idx[1024];
                 // batch vector has no precomputed index, build it first
                 get_path_vector(sys_conf, batch_list[i].batch, path_vector);

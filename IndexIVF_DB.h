@@ -16,7 +16,8 @@ namespace ivfhnsw {
 typedef struct batch_info {
     size_t batch;
     bool valid;
-    bool precomputed_idx;
+    int ts;
+    bool no_precomputed_idx;
 } batch_info_t;
 
 class Index_DB {

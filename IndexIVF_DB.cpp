@@ -248,7 +248,7 @@ int Index_DB::GetLatestIndexInfo(size_t &ver, size_t &batch_start, size_t &batch
     return 0;
 }
 
-int Index_DB::AppendPQInfo(size_t ver, bool with_opq, size_t code_size, size_t nsubc) {
+int Index_DB::AppendPQInfo(size_t ver, bool with_opq, size_t nsubc) {
     int rc = -1;
     PGresult *res;
     char sql_str[1024];
@@ -260,8 +260,8 @@ int Index_DB::AppendPQInfo(size_t ver, bool with_opq, size_t code_size, size_t n
         strcpy(bool_var, "FALSE");
     }
 
-    sprintf(sql_str, "INSERT INTO pq_info(ver, with_opq, code_size, nsubc) VALUES(%lu, %s, %lu, %lu)",
-            ver, bool_var, code_size, nsubc);
+    sprintf(sql_str, "INSERT INTO pq_info(ver, with_opq, nsubc) VALUES(%lu, %s, %lu)",
+            ver, bool_var, nsubc);
     std::cout << "Append PQ Info with SQL: " << sql_str << std::endl;
     return CmdWithTrans(sql_str);
 }

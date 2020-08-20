@@ -46,7 +46,7 @@ class Index_DB {
      *
      */
     int ActiveBatch(size_t batch);
-    int AppendPQInfo(size_t ver, bool with_opq, size_t code_size, size_t nsubc);
+    int AppendPQInfo(size_t ver, bool with_opq, size_t nsubc);
     int GetLatestPQInfo(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
     int AppendPQConf(pq_conf_t &pq_conf);
     int GetLatestPQConf(pq_conf_t &pq_conf);

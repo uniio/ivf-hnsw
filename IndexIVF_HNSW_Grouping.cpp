@@ -633,17 +633,17 @@ namespace ivfhnsw
         }
         // Train OPQ rotation matrix and rotate residuals
         if (do_opq) {
-            faiss::OPQMatrix *matrix = new faiss::OPQMatrix(d, pq->M);
+            faiss::OPQMatrix* matrix = new faiss::OPQMatrix(d, pq->M);
 
             std::cout << "Training OPQ Matrix" << std::endl;
-	    std::cout << "Max Training Points: " << n << std::endl;
-	    std::cout << "d: " << d << " M: " << pq->M << std::endl;
+            std::cout << "Max Training Points: " << n << std::endl;
+            std::cout << "d: " << d << " M: " << pq->M << std::endl;
             matrix->verbose = true;
             matrix->max_train_points = n;
             matrix->niter = 100;
             matrix->train(n, train_residuals.data());
             opq_matrix = matrix;
-	    std::cout << "Training OPQ Matrix Done" << std::endl;
+            std::cout << "Training OPQ Matrix Done" << std::endl;
 
             std::vector<float> copy_train_residuals(n * d);
             memcpy(copy_train_residuals.data(), train_residuals.data(), n * d * sizeof(float));
@@ -697,7 +697,6 @@ namespace ivfhnsw
         printf("Training %zdx%zd PQ on %ld vectors in 1D\n", norm_pq->M, norm_pq->ksub, train_norms.size());
         norm_pq->verbose = true;
         norm_pq->train(n, train_norms.data());
-    printf("done xxxxxxxxxxxxxxxxx\n");
     }
 
     void IndexIVF_HNSW_Grouping::compute_inter_centroid_dists()
@@ -976,7 +975,7 @@ out:
             return rc;
         }
 
-        return db_p->AppendPQInfo(pq_conf.ver, pq_conf.with_opq, sys_conf.code_size, sys_conf.nsubc);
+        return db_p->AppendPQInfo(pq_conf.ver, pq_conf.with_opq, sys_conf.nsubc);
     }
 
     // TODO: I/O error handler when read PQ codebooks from file

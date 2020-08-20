@@ -23,17 +23,16 @@ using namespace hnswlib;
 using namespace ivfhnsw;
 
 int main(int argc, char **argv) {
-    char path_centroids[1024];
-    char path_info[1024];
-    char path_edges[1024];
-    int  rc;
+    char          path_centroids[1024];
+    char          path_info[1024];
+    char          path_edges[1024];
+    system_conf_t sys_conf;
+    pq_conf_t     pq_conf;
+    int           rc;
 
     // Initialize database interface
     // Following code is 1st start point in service, get work path first
-    system_conf_t sys_conf;
-    pq_conf_t pq_conf;
-    Index_DB* db_p = nullptr;
-    db_p = new Index_DB("localhost", 5432, "servicedb", "postgres", "postgres");
+    Index_DB* db_p = new Index_DB("localhost", 5432, "servicedb", "postgres", "postgres");
     rc   = db_p->Connect();
     if (rc) {
         std::cout << "Failed to connect to Database server" << std::endl;
@@ -80,6 +79,7 @@ int main(int argc, char **argv) {
         rc = -1;
         goto out;
     }
+
     rc = index->append_pq_info(sys_conf, pq_conf);
     if (rc) {
         std::cout << "Failed to add PQ Info into database" << std::endl;

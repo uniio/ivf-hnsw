@@ -201,7 +201,7 @@ namespace ivfhnsw {
     /// clone file_src in new file named file_dst
     int copy_file(const char *file_src, const char *file_dst);
 
-    typedef struct system_conf {
+    typedef struct {
         char    path_base_data[1024];
         char    path_base_model[1024];
         size_t  batch_max;
@@ -215,7 +215,7 @@ namespace ivfhnsw {
         size_t  do_pruning;
     } system_conf_t;
 
-    typedef struct pq_conf {
+    typedef struct {
         size_t ver;
         bool   with_opq;
         size_t M;

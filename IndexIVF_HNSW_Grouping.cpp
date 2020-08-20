@@ -1056,6 +1056,8 @@ out:
 
         // TODO: mocify following function, force core dump when failed to build quantizer
         build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
+
+        return 0;
     }
 
     int IndexIVF_HNSW_Grouping::build_prcomputed_index(system_conf_t &sys_conf, size_t skip_batch)

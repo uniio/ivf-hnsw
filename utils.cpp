@@ -338,7 +338,10 @@ namespace ivfhnsw {
     {
         struct stat st;
         int rc = stat(path_vec, &st);
-        if (rc) return rc;
+        if (rc) {
+            std::cout << "Failed to access file: " << path_vec << std::endl;
+            return rc;
+        }
 
         std::ifstream fs_input;
         try {

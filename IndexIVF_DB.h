@@ -13,7 +13,7 @@
 
 namespace ivfhnsw {
 
-typedef struct batch_info {
+typedef struct {
     size_t batch;
     bool valid;
     int ts;

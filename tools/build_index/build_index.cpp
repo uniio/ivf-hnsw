@@ -22,37 +22,40 @@ using std::endl;
 using namespace hnswlib;
 using namespace ivfhnsw;
 
-int main(int argc, char **argv) {
-    system_conf_t sys_conf;
-    pq_conf_t pq_conf;
-    int rc;
+int main(int argc, char** argv) {
+    system_conf_t           sys_conf;
+    pq_conf_t               pq_conf;
+    Index_DB*               db_p  = nullptr;
+    IndexIVF_HNSW_Grouping* index = nullptr;
+    int                     rc;
+    size_t                  ver, batch_start, batch_end;
 
     // Initialize database interface
     // Following code is 1st start point in service, get work path first
-    Index_DB* db_p = new Index_DB("localhost", 5432, "servicedb", "postgres", "postgres");
+    db_p = new Index_DB("localhost", 5432, "servicedb", "postgres", "postgres");
     rc = db_p->Connect();
     if (rc) {
         std::cout << "Failed to connect to Database server" << std::endl;
-        exit(1);
+        goto out;
     }
 
-    rc   = db_p->GetSysConfig(sys_conf);
+    rc = db_p->GetSysConfig(sys_conf);
     if (rc) {
         std::cout << "Failed to get system configuration" << std::endl;
-        exit(1);
+        goto out;
     }
 
     rc = db_p->GetLatestPQConf(pq_conf);
     if (rc) {
         std::cout << "Failed to get PQ configuration" << std::endl;
-        exit(1);
+        goto out;
     }
 
     //==================
     // Initialize Index
     //==================
-    IndexIVF_HNSW_Grouping *index = new IndexIVF_HNSW_Grouping(sys_conf.dim, sys_conf.nc, sys_conf.code_size, 8, sys_conf.nsubc, db_p);
-    index->do_opq = pq_conf.with_opq;
+    index = new IndexIVF_HNSW_Grouping(sys_conf.dim, sys_conf.nc, sys_conf.code_size, 8, sys_conf.nsubc, db_p);
+    index->do_opq  = pq_conf.with_opq;
 
     //==========
     // Load PQ
@@ -60,28 +63,56 @@ int main(int argc, char **argv) {
     rc = index->load_pq_codebooks(sys_conf, pq_conf);
     if (rc) {
         std::cout << "Failed to load PQ CodeBooks" << std::endl;
-        exit(1);
+        goto out;
     }
     std::cout << "Success to load PQ CodeBooks" << std::endl;
-    exit(1);
-    
-    size_t ver, batch_start, batch_end;
+
     rc = db_p->GetLatestIndexInfo(ver, batch_start, batch_end);
     if (rc) {
         std::cout << "Failed to get vector batch info" << std::endl;
-        exit(1);
+        goto out;
     }
     if (ver == 0) {
-        std::cout << "Failed to get vector batch info" << std::endl;
-        exit(1);
+        std::cout << "No batch info" << std::endl;
+        // valid version always start from 1
     }
-    rc = index->build_prcomputed_index(sys_conf, sys_conf.batch_max);
+    ver++;
+
+    rc = index->load_quantizer(sys_conf, pq_conf);
     if (rc) {
-        std::cout << "Failed to build precomputed index" << std::endl;
-        exit(1);
+        std::cout << "Failed to load quantizer" << std::endl;
+        goto out;
+    }
+    index->load_pq_codebooks(sys_conf, pq_conf);
+    if (rc) {
+        std::cout << "Failed to load PQ codebooks" << std::endl;
+        goto out;
     }
 
-    delete index;
+    rc = index->rebuild_index(sys_conf, batch_start, batch_end);
+    if (rc) {
+        std::cout << "Failed to rebuild index" << std::endl;
+        goto out;
+    }
+    std::cout << "Success to rebuild index" << std::endl;
 
-    return 0;
+    rc = index->save_index(sys_conf, ver);
+    if (rc) {
+        std::cout << "Failed to save index" << std::endl;
+        goto out;
+    }
+    std::cout << "Success to save index" << std::endl;
+
+    rc = db_p->AppendIndexInfo(ver, batch_start, batch_end);
+    if (rc) {
+        std::cout << "Failed to add index info to database" << std::endl;
+        goto out;
+    }
+    std::cout << "Success add rebuild index info to database" << std::endl;
+
+out:
+    if (db_p == nullptr) delete db_p;
+    if (index == nullptr) delete index;
+
+    return rc;
 }

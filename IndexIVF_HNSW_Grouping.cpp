@@ -1170,7 +1170,7 @@ out:
     }
 
     int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const char *path_vector,
-                                                     const char *path_precomputed_idx)
+                                                       const char *path_precomputed_idx)
     {
         const size_t batch_size_max = 1000000;
         size_t groups_per_iter = 250000;
@@ -1182,17 +1182,30 @@ out:
 
         // get vector number in the batch of vector file
         rc = get_vec_attr(path_vector, dim, nvecs);
-        if (rc) return rc;
+        if (rc)
+            return rc;
 
-        std::cout << "Build index for vector file: " << path_vector << std::endl;
+        std::cout << "Build index for file: " << path_vector << " " << path_precomputed_idx << std::endl;
         StopW stopw = StopW();
 
         batch_size = batch_size_max;
-        if (nvecs < batch_size_max) batch_size = nvecs;
+        if (nvecs < batch_size_max)
+            batch_size = nvecs;
+
+        // calculate correct batch count
         nbatches = nvecs / batch_size;
+        if (nvecs > nbatches * batch_size) {
+            nbatches++;
+        }
 
         // fix behavior when total vector record number in file smaller than groups_per_iter
-        if (nvecs < groups_per_iter) groups_per_iter = nvecs;
+        if (nvecs < groups_per_iter)
+            groups_per_iter = nvecs;
+
+        std::cout << "Batch file " << path_vector << " with vector number of " << nvecs << std::endl;
+        std::cout << "Build index with batch size " << batch_size << std::endl;
+        std::cout << "Build index with batch count " << nbatches << std::endl;
+        std::cout << "Build index in one iteration with groups count " << groups_per_iter << std::endl;
 
         /*
          * not all batch have same vector number
@@ -1211,10 +1224,10 @@ out:
             }
         }
 
-        for (size_t ngroups_added = 0; ngroups_added < nvecs; ngroups_added += groups_per_iter)
+        for (size_t ngroups_added = 0; ngroups_added < nc; ngroups_added += groups_per_iter)
         {
             std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
-                      << ngroups_added << " / " << nvecs << std::endl;
+                      << ngroups_added << " / " << nc << std::endl;
 
             std::vector<std::vector<uint8_t>> data(groups_per_iter);
             std::vector<std::vector<idx_t>> ids(groups_per_iter);
@@ -1270,6 +1283,8 @@ out:
                 add_group(ngroups_added + i, group_size, group_data.data(), ids[i].data());
             }
         }
+
+        return 0;
     }
 
     void IndexIVF_HNSW_Grouping::get_path_info(const system_conf_t sys_conf, const pq_conf_t pq_conf, char *path_index)
@@ -1325,7 +1340,7 @@ out:
                 batch_idx);
     }
 
-    int IndexIVF_HNSW_Grouping::save_index(const system_conf_t sys_conf, const size_t idx_ver)
+    int IndexIVF_HNSW_Grouping::save_index(const system_conf_t &sys_conf, const size_t idx_ver)
     {
         char path_index[1024], path_index_dir[1024], *ptr;
         int rc;
@@ -1377,10 +1392,11 @@ out:
         int  rc;
 
         auto sz = batch_list.size();
-        for (size_t i = i; i < sz; i++) {
+        for (size_t i = 0; i < sz; i++) {
             // get vector file path and precomputed index file path
-            sprintf(path_vector, "%s/bigann_base_%lu.bvecs", sys_conf.path_base_data, batch_list[i]);
-            sprintf(path_precomputed_idx, "%s/precomputed_idxs_%lu.ivecs", sys_conf.path_base_data, batch_list[i]);
+            // TODO: notice 03lu, because we use 1000 vector, format should be 001 002
+            sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs", sys_conf.path_base_data, batch_list[i]);
+            sprintf(path_precomputed_idx, "%s/split_1000/precomputed_idxs_%03lu.ivecs", sys_conf.path_base_data, batch_list[i]);
 
             rc = add_one_batch_to_index(path_vector, path_precomputed_idx);
             if (rc) {
@@ -1427,6 +1443,49 @@ out:
             std::cout << "Failed to build index for batch from " << batch_begin << " to " << batch_end << std::endl;
         }
 
+        return rc;
+    }
+
+    int IndexIVF_HNSW_Grouping::rebuild_index(system_conf_t &sys_conf, size_t &batch_start, size_t &batch_end)
+    {
+        int rc;
+        std::vector<batch_info_t> batch_list;
+        std::vector<size_t> batchs_to_index;
+
+        rc = db_p->GetBatchList(batch_list);
+        if (rc) {
+            std::cout << "Failed to get batch info from database" << std::endl;
+            goto out;
+        }
+        if (batch_list.empty()) {
+            std::cout << "No batch exists, cannot build index" << std::endl;
+            goto out;
+        }
+        for (std::vector<batch_info_t>::iterator it = batch_list.begin(); it != batch_list.end(); ++it) {
+            auto batch_info = *it;
+            if (batch_info.valid == false || batch_info.no_precomputed_idx == true)
+                continue;
+            batchs_to_index.push_back(batch_info.batch);
+        }
+
+        if (batchs_to_index.empty()) {
+            std::cout << "No batch can build index, either batch is invalid or precomputed index not build yet" << std::endl;
+            goto out;
+        }
+
+        // build_batchs_to_index
+        rc = build_batchs_to_index(sys_conf, batchs_to_index);
+        if (rc) {
+            std::cout << "Failed to build index" << std::endl;
+            goto out;
+        }
+        std::cout << "Success build index" << std::endl;
+
+        // return batch range to build index
+        batch_start = batchs_to_index[0];
+        batch_end = batchs_to_index[batchs_to_index.size() - 1];
+
+    out:
         return rc;
     }
 }

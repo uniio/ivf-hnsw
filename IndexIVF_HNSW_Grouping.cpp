@@ -1287,48 +1287,48 @@ out:
         return 0;
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_info(const system_conf_t sys_conf, const pq_conf_t pq_conf, char *path_index)
+    void IndexIVF_HNSW_Grouping::get_path_info(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index)
     {
         sprintf(path_index, "%s/hnsw_M%lu_ef%lu.bin", sys_conf.path_base_model, pq_conf.M, pq_conf.efConstruction);
     }
-    void IndexIVF_HNSW_Grouping::get_path_edges(const system_conf_t sys_conf, const pq_conf_t pq_conf, char *path_index)
+    void IndexIVF_HNSW_Grouping::get_path_edges(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index)
     {
         sprintf(path_index, "%s/hnsw_M%lu_ef%lu.ivecs", sys_conf.path_base_model, pq_conf.M, pq_conf.efConstruction);
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_centroids(const system_conf_t sys_conf, char *path_index) {
+    void IndexIVF_HNSW_Grouping::get_path_centroids(const system_conf_t &sys_conf, char *path_index) {
         sprintf(path_index, "%s/centroids_sift1b.fvecs", sys_conf.path_base_data);
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_index(const system_conf_t sys_conf, const size_t idx_ver, char* path_index)
+    void IndexIVF_HNSW_Grouping::get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char* path_index)
     {
         sprintf(path_index, "%s/%lu/ivfhnsw_OPQ%lu_nsubc%lu_%lu.index",
                 sys_conf.path_base_model, idx_ver, code_size, nsubc, idx_ver);
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_pq(const system_conf_t sys_conf, const size_t idx_ver, char *path_index) {
+    void IndexIVF_HNSW_Grouping::get_path_pq(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index) {
         sprintf(path_index, "%s/%lu/pq%lu_nsubc%lu.opq",
                 sys_conf.path_base_model, idx_ver, code_size, nsubc);
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_opq_matrix(const system_conf_t sys_conf, const size_t idx_ver, char *path_index) {
+    void IndexIVF_HNSW_Grouping::get_path_opq_matrix(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index) {
         sprintf(path_index, "%s/%lu/matrix_pq%lu_nsubc%lu.opq",
                 sys_conf.path_base_model, idx_ver, code_size, nsubc);
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_norm_pq(const system_conf_t sys_conf, const size_t idx_ver, char *path_index) {
+    void IndexIVF_HNSW_Grouping::get_path_norm_pq(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index) {
         sprintf(path_index, "%s/%lu/norm_pq%lu_nsubc%lu.opq",
                 sys_conf.path_base_model, idx_ver, code_size, nsubc);
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_vector(const system_conf_t sys_conf, const size_t batch_idx, char *path_vector) {
+    void IndexIVF_HNSW_Grouping::get_path_vector(const system_conf_t &sys_conf, const size_t batch_idx, char *path_vector) {
         // TODO: current code assume maximize batch index number is 1000
         // that's why we use 03lu here
         sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs",
                 sys_conf.path_base_data, batch_idx);
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_precomputed_idx(const system_conf_t sys_conf, 
+    void IndexIVF_HNSW_Grouping::get_path_precomputed_idx(const system_conf_t &sys_conf, 
                                                           const size_t batch_idx,
                                                           char* path_precomputed_idx )
     {
@@ -1338,6 +1338,14 @@ out:
                 "%s/split_1000/precomputed_idxs_sift1b_%03lu.ivecs",
                 sys_conf.path_base_data,
                 batch_idx);
+    }
+
+    int IndexIVF_HNSW_Grouping::load_index(const system_conf_t &sys_conf, const size_t idx_ver)
+    {
+        char path_index[1024];
+
+        get_path_index(sys_conf, idx_ver, path_index);
+        return read(path_index);
     }
 
     int IndexIVF_HNSW_Grouping::save_index(const system_conf_t &sys_conf, const size_t idx_ver)
@@ -1420,7 +1428,7 @@ out:
         return build_batchs_to_index(sys_conf, batch_list);
     }
 
-    int IndexIVF_HNSW_Grouping::build_index(const system_conf_t sys_conf,
+    int IndexIVF_HNSW_Grouping::build_index(const system_conf_t &sys_conf,
                                             const size_t batch_begin,
                                             const size_t batch_end,
                                             const size_t index_ver)

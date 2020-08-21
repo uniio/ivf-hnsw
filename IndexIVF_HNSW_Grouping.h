@@ -203,23 +203,25 @@ namespace ivfhnsw {
          *
          */
         int add_one_batch_to_index(const char *path_base, const char *path_precomputed_idx);
-        void get_path_index(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
+        void get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
         int save_index(const system_conf_t &sys_conf, const size_t idx_ver);
 
-        void get_path_centroids(const system_conf_t sys_conf, char *path_index);
+        void get_path_centroids(const system_conf_t &sys_conf, char *path_index);
 
-        void get_path_info(const system_conf_t sys_conf, const pq_conf_t pq_conf, char *path_index);
-        void get_path_edges(const system_conf_t sys_conf, const pq_conf_t pq_conf, char *path_index);
+        void get_path_info(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index);
+        void get_path_edges(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index);
 
-        void get_path_pq(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
-        void get_path_opq_matrix(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
-        void get_path_norm_pq(const system_conf_t sys_conf, const size_t idx_ver, char *path_index);
+        void get_path_pq(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
+        void get_path_opq_matrix(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
+        void get_path_norm_pq(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
 
-        void get_path_vector(const system_conf_t sys_conf, const size_t batch_idx, char *path_vector);
-        void get_path_precomputed_idx(const system_conf_t sys_conf, const size_t batch_idx, char *path_precomputed_idx);
+        void get_path_vector(const system_conf_t &sys_conf, const size_t batch_idx, char *path_vector);
+        void get_path_precomputed_idx(const system_conf_t &sys_conf, const size_t batch_idx, char *path_precomputed_idx);
 
-        int build_index(const system_conf_t sys_conf, const size_t batch_begin, const size_t batch_end, const size_t index_ver);
+        int build_index(const system_conf_t &sys_conf, const size_t batch_begin, const size_t batch_end, const size_t index_ver);
         int rebuild_index(system_conf_t &sys_conf, size_t &batch_start, size_t &batch_end);
+
+        int load_index(const system_conf_t &sys_conf, const size_t idx_ver);
 
       protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points

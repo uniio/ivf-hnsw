@@ -446,7 +446,7 @@ namespace ivfhnsw
 
     int IndexIVF_HNSW_Grouping::create_new_batch(size_t batch_idx)
     {
-        return db_p->CreateBatch(batch_idx);
+        return db_p->AllocateBatch(batch_idx);
     }
 
     int IndexIVF_HNSW_Grouping::write(const char *path_index, bool do_trunc)
@@ -1087,7 +1087,7 @@ out:
                 std::cout << "Failed to build precomputing index for batch: " <<  a_batch.batch << std::endl;
                 return rc;
             }
-            rc = db_p->ActiveBatch(a_batch.batch);
+            rc = db_p->ActivePrecomputedIndex(a_batch.batch);
             if (rc) {
                 std::cout << "Failed to active precomputing index for batch: " <<  a_batch.batch << std::endl;
                 return rc;
@@ -1109,7 +1109,7 @@ out:
         StopW stopw = StopW();
 
         std::ifstream input(path_base, std::ios::binary);
-        std::ofstream output(path_prcomputed_index, std::ios::binary);
+        std::ofstream output(path_prcomputed_index, std::ios::binary | std::ios::trunc);
 
         if (!input.is_open()) {
             std::cout << "Failed to open base vector file: " << path_base << std::endl;

@@ -93,7 +93,8 @@ int main(int argc, char** argv)
     // In design, we will not Train PQ in service1b, it will be handled by seperate tool
     // TODO: may need discuss, if it's good design decision
     //==========
-    if (index->get_latest_pq_info(pq_ver, with_opq, code_size, nsubc)) {
+    // if (index->get_latest_pq_info(pq_ver, with_opq, code_size, nsubc)) 
+    {
         std::cout << "Error when get PQ info from database" << std::endl;
         exit(1);
     }

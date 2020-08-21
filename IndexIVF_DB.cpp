@@ -196,14 +196,21 @@ int Index_DB::CmdWithTrans(char *sql_str) {
     return rc;
 }
 
-int Index_DB::CreateBatch(size_t batch) {
+int Index_DB::AllocateBatch(size_t batch) {
     char sql_str[512];
 
-    sprintf(sql_str, "INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(%lu, NOW()::TIMESTAMP, TRUE, TRUE)", batch);
+    sprintf(sql_str, "INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(%lu, NOW()::TIMESTAMP, FALSE, TRUE)", batch);
     return CmdWithTrans(sql_str);
 }
 
 int Index_DB::ActiveBatch(size_t batch) {
+    char sql_str[512];
+
+    sprintf(sql_str, "UPDATE batch_info SET valid = TRUE WHERE batch = %lu", batch);
+    return CmdWithTrans(sql_str);
+}
+
+int Index_DB::ActivePrecomputedIndex(size_t batch) {
     char sql_str[512];
 
     sprintf(sql_str, "UPDATE batch_info SET no_precomputed_idx = FALSE WHERE batch = %lu", batch);

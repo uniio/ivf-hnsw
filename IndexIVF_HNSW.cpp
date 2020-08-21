@@ -676,7 +676,7 @@ namespace ivfhnsw {
             {
                 sprintf(path_f, "%s/hdr.vec", home_dir);
                 std::cout << "write file: " << path_f << std::endl;
-                std::ofstream output(path_f, std::ios::binary);
+                std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
 
                 /*
                  * hdr_idx.efConstruction already set by build_quantizer function
@@ -704,7 +704,7 @@ namespace ivfhnsw {
             {
                 sprintf(path_f, "%s/cnorms.vec", home_dir);
                 std::cout << "write file: " << path_f << std::endl;
-                std::ofstream output(path_f, std::ios::binary);
+                std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
                 write_vector(output, centroid_norms);
                 output.close();
             }
@@ -712,7 +712,7 @@ namespace ivfhnsw {
             // Save PQ codes
             {
                 sprintf(path_f, "%s/pq.vec", home_dir);
-                std::ofstream output(path_f, std::ios::binary);
+                std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
                 for (size_t i = 0; i < nc; i++)
                     write_vector(output, codes[i]);
                 output.close();
@@ -730,7 +730,7 @@ namespace ivfhnsw {
                     }
 
                     sprintf(path_f, "%s/opq.vec", home_dir);
-                    std::ofstream output(path_f, std::ios::binary);
+                    std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
                     write_vector(output, copy_centroid);
                     output.close();
                 }
@@ -739,7 +739,7 @@ namespace ivfhnsw {
             // Save norm PQ codes
             {
                 sprintf(path_f, "%s/normpq.vec", home_dir);
-                std::ofstream output(path_f, std::ios::binary);
+                std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
                 for (size_t i = 0; i < nc; i++)
                     write_vector(output, norm_codes[i]);
                 output.close();

@@ -33,20 +33,29 @@ class Index_DB {
     int Connect();
 
     /*
-     *  CreateBatch used to get a new batch number used for new data
+     *  AllocateBatch used to get a new batch number used for new data
      *
      *  @param  batch   batch number
      *
      */
-    int CreateBatch(size_t batch);
+    int AllocateBatch(size_t batch);
 
     /*
-     *  ActiveBatch used to mark the batch, it means precomputed index for the batch is created
+     *  ActiveBatch used to mark the batch, it means the batch vector file not write anymore
+     *  it can be used to build precomputed index
      *
      *  @param  batch   batch number
      *
      */
     int ActiveBatch(size_t batch);
+
+    /*
+     *  ActivePrecomputedIndex used to mark the batch, it means precomputed index for the batch is created
+     *
+     *  @param  batch   batch number
+     *
+     */
+    int ActivePrecomputedIndex(size_t batch);
     int AppendPQInfo(size_t ver, bool with_opq, size_t nsubc);
     int GetLatestPQInfo(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
     int AppendPQConf(pq_conf_t &pq_conf);

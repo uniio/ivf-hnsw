@@ -1054,6 +1054,8 @@ out:
         get_path_info(sys_conf, pq_conf, path_info);
         get_path_edges(sys_conf, pq_conf, path_edges);
 
+        do_opq = pq_conf.with_opq;
+
         // TODO: mocify following function, force core dump when failed to build quantizer
         build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
 
@@ -1083,6 +1085,11 @@ out:
             rc = build_prcomputed_index(path_vector, path_precomputed_idx);
             if (rc) {
                 std::cout << "Failed to build precomputing index for batch: " <<  a_batch.batch << std::endl;
+                return rc;
+            }
+            rc = db_p->ActiveBatch(a_batch.batch);
+            if (rc) {
+                std::cout << "Failed to active precomputing index for batch: " <<  a_batch.batch << std::endl;
                 return rc;
             }
         }

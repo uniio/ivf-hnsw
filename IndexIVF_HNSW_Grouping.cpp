@@ -409,7 +409,7 @@ namespace ivfhnsw
         std::vector<SearchInfo_t> searchRet(2*k);
 
         // search by ANN first to get 2*k result
-        search(k, query, distances_base, labels_base);
+        search(2*k, query, distances_base, labels_base);
 
         /*
          *  get vector from disk according to result's lablel value (vector index in base vector file)
@@ -447,6 +447,10 @@ namespace ivfhnsw
     int IndexIVF_HNSW_Grouping::create_new_batch(size_t batch_idx)
     {
         return db_p->AllocateBatch(batch_idx);
+    }
+
+    int IndexIVF_HNSW_Grouping::commit_batch(size_t batch_idx) {
+        return db_p->ActiveBatch(batch_idx);
     }
 
     int IndexIVF_HNSW_Grouping::write(const char *path_index, bool do_trunc)

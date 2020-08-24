@@ -62,8 +62,11 @@ namespace ivfhnsw {
 
         int prepare_db();
 
-        // commit batch index status
+        // allocate a new batch to store new vector
         int create_new_batch(size_t batch_idx);
+
+        // commit batch index status
+        int commit_batch(size_t batch_idx);
 
         void train_pq(size_t n, const float *x);
 

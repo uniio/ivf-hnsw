@@ -444,9 +444,9 @@ namespace ivfhnsw
         return rc;
     }
 
-    int IndexIVF_HNSW_Grouping::create_new_batch(size_t batch_idx)
+    int IndexIVF_HNSW_Grouping::create_new_batch(size_t batch_idx, size_t vector_id)
     {
-        return db_p->AllocateBatch(batch_idx);
+        return db_p->AllocateBatch(batch_idx, vector_id);
     }
 
     int IndexIVF_HNSW_Grouping::commit_batch(size_t batch_idx) {

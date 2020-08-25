@@ -24,11 +24,13 @@ CREATE TABLE IF NOT EXISTS system_orca (
 
 /*
   batch is batch number
+  start_id is first vector id in the batch vector file
   ts is timestamp when insert current record
   valid indicate the batch data is valid or invalid
 */
 CREATE TABLE IF NOT EXISTS batch_info (
     batch INTEGER NOT NULL,
+    start_id INTEGER NOT NULL,
     ts TIMESTAMP NOT NULL,
     valid BOOLEAN NOT NULL,
     no_precomputed_idx BOOLEAN NOT NULL

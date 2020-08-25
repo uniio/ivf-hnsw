@@ -90,6 +90,7 @@ int Index_DB::GetBatchList(std::vector<batch_info_t> &batch_list) {
             batch_cur.valid = true;
 
         batch_cur.batch = (size_t)atoi(PQgetvalue(res, i, PQfnumber(res, "batch")));
+        batch_cur.start_id = (size_t)atoi(PQgetvalue(res, i, PQfnumber(res, "start_id")));
         batch_list.push_back(batch_cur);
     }
     PQclear(res);
@@ -196,10 +197,12 @@ int Index_DB::CmdWithTrans(char *sql_str) {
     return rc;
 }
 
-int Index_DB::AllocateBatch(size_t batch) {
+int Index_DB::AllocateBatch(size_t batch, size_t start_id) {
     char sql_str[512];
 
-    sprintf(sql_str, "INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(%lu, NOW()::TIMESTAMP, FALSE, TRUE)", batch);
+    sprintf(sql_str, "INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) \
+            VALUES(%lu, %lu, NOW()::TIMESTAMP, FALSE, TRUE)",
+            batch, start_id);
     return CmdWithTrans(sql_str);
 }
 

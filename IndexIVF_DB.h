@@ -15,6 +15,7 @@ namespace ivfhnsw {
 
 typedef struct {
     size_t batch;
+    size_t start_id;
     bool valid;
     int ts;
     bool no_precomputed_idx;
@@ -35,10 +36,11 @@ class Index_DB {
     /*
      *  AllocateBatch used to get a new batch number used for new data
      *
-     *  @param  batch   batch number
+     *  @param  batch       batch number
+     *  @param  start_id    first vector id in the batch
      *
      */
-    int AllocateBatch(size_t batch);
+    int AllocateBatch(size_t batch, size_t start_id);
 
     /*
      *  ActiveBatch used to mark the batch, it means the batch vector file not write anymore

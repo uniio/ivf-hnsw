@@ -46,7 +46,15 @@ namespace ivfhnsw {
         */
         void add_group(size_t group_idx, size_t group_size, const float *x, const idx_t *ids);
 
-        void search(size_t k, const float *x, float *distances, long *labels);
+        /*
+         * @param  k             number of the closest vertices to search, ie. how many result need to return
+         * @param  query         query vector used to search
+         * @param  distances     distances between query vector and points (vectors in search result)
+         * @param  labels        order no when add vector into index, begin from 0
+         * @param  path_base     path of base vector data file
+         *
+         */
+        void search(size_t k, const float *query, float *distances, long *labels);
 
         // apply disk search based on ANN search result
         void searchDisk(size_t k, const float *query, float *distances, long *labels, const char *path_base);
@@ -63,7 +71,7 @@ namespace ivfhnsw {
         int prepare_db();
 
         // allocate a new batch to store new vector
-        int create_new_batch(size_t batch_idx);
+        int create_new_batch(size_t batch_idx, size_t vector_id);
 
         // commit batch index status
         int commit_batch(size_t batch_idx);

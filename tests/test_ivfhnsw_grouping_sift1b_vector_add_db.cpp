@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
     size_t segments_num = base_files.size();
     size_t segments_idx = 0;
     char  index_nm[1024];
+    size_t vector_id = 0;
 
 add_loop:
     if (segments_idx == segments_num) {
@@ -222,10 +223,11 @@ add_loop:
 //            std::cout << "Failed to write index table" << std::endl;
 //            exit(-1);
 //        }
-        if (index->create_new_batch(segments_idx)) {
+        if (index->create_new_batch(segments_idx, vector_id)) {
             std::cout << "Failed to write index table" << std::endl;
             exit(-1);
         }
+        vector_id += vec_count;
     }
     // For correct search using OPQ encoding rotate points in the coarse quantizer
     if (opt.do_opq) {

@@ -52,6 +52,28 @@ namespace ivfhnsw {
         return 0;
     }
 
+    int IndexIVF_HNSW::build_quantizer(system_conf_t& sys_conf, pq_conf_t& pq_conf) 
+    {
+        char path_centroids[1024];
+        char path_info[1024];
+        char path_edges[1024];
+        int rc = 0;
+
+        get_path_centroids(sys_conf, path_centroids);
+        get_path_info(sys_conf, pq_conf, path_info);
+        get_path_edges(sys_conf, pq_conf, path_edges);
+
+        try {
+            build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
+        } catch (...) {
+            rc = -1;
+            std::cout << "Failed to save quantizer files" << std::endl;
+        }
+
+        return rc;
+
+    }
+
     /**
      * There has been removed parallel HNSW construction in order to make internal
      * centroid ids equal to external ones.
@@ -848,5 +870,16 @@ namespace ivfhnsw {
             const float *centroid = quantizer->getDataByInternalId(keys[i]);
             faiss::fvec_madd(d, x + i*d, -1., centroid, residuals + i*d);
         }
+    }
+
+    void IndexIVF_HNSW::get_path_info(const system_conf_t& sys_conf, const pq_conf_t& pq_conf, char* path_index) {
+        sprintf(path_index, "%s/hnsw_M%lu_ef%lu.bin", sys_conf.path_base_model, pq_conf.M, pq_conf.efConstruction);
+    }
+    void IndexIVF_HNSW::get_path_edges(const system_conf_t& sys_conf, const pq_conf_t& pq_conf, char* path_index) {
+        sprintf(path_index, "%s/hnsw_M%lu_ef%lu.ivecs", sys_conf.path_base_model, pq_conf.M, pq_conf.efConstruction);
+    }
+
+    void IndexIVF_HNSW::get_path_centroids(const system_conf_t& sys_conf, char* path_index) {
+        sprintf(path_index, "%s/centroids_sift1b.fvecs", sys_conf.path_base_data);
     }
 }

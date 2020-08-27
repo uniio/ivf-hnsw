@@ -217,11 +217,6 @@ namespace ivfhnsw {
         void get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
         int save_index(const system_conf_t &sys_conf, const size_t idx_ver);
 
-        void get_path_centroids(const system_conf_t &sys_conf, char *path_index);
-
-        void get_path_info(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index);
-        void get_path_edges(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index);
-
         void get_path_pq(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
         void get_path_opq_matrix(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
         void get_path_norm_pq(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);

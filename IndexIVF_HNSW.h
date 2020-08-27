@@ -178,7 +178,14 @@ namespace ivfhnsw {
         void search2(size_t k, const float *x, float *distances, long *labels, float *query_centroid_dists, idx_t *centroid_idxs);
         void search2m(size_t k, const float *x, float *distances[], long *labels[], float *query_centroid_dists, idx_t *centroid_idxs);
 
-    protected:
+        void get_path_centroids(const system_conf_t& sys_conf, char* path_index);
+
+        void get_path_info(const system_conf_t& sys_conf, const pq_conf_t& pq_conf, char* path_index);
+        void get_path_edges(const system_conf_t& sys_conf, const pq_conf_t& pq_conf, char* path_index);
+
+        int build_quantizer(system_conf_t& sys_conf, pq_conf_t& pq_conf);
+
+    protected :
         /// Size pq.M * pq.ksub
         std::vector<float> precomputed_table;
 

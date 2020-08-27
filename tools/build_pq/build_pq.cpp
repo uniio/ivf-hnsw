@@ -23,9 +23,9 @@ using namespace hnswlib;
 using namespace ivfhnsw;
 
 int main(int argc, char **argv) {
-    char          path_centroids[1024];
-    char          path_info[1024];
-    char          path_edges[1024];
+    // char          path_centroids[1024];
+    // char          path_info[1024];
+    // char          path_edges[1024];
     system_conf_t sys_conf;
     pq_conf_t     pq_conf;
     int           rc;
@@ -57,18 +57,24 @@ int main(int argc, char **argv) {
     IndexIVF_HNSW_Grouping *index = new IndexIVF_HNSW_Grouping(sys_conf.dim, sys_conf.nc, sys_conf.code_size, 8, sys_conf.nsubc, db_p);
     index->do_opq = pq_conf.with_opq;
 
-    index->get_path_centroids(sys_conf, path_centroids);
-    index->get_path_info(sys_conf, pq_conf, path_info);
-    index->get_path_edges(sys_conf, pq_conf, path_edges);
+    rc = index->build_quantizer(sys_conf, pq_conf);
+    if (rc) {
+        std::cout << "Failed to build quantizer" << std::endl;
+        rc = -1;
+        goto out;
+    }
+    // index->get_path_centroids(sys_conf, path_centroids);
+    // index->get_path_info(sys_conf, pq_conf, path_info);
+    // index->get_path_edges(sys_conf, pq_conf, path_edges);
 
-    //==================
-    // Initialize Index
-    //==================
-    index->build_quantizer(path_centroids,
-                           path_info,
-                           path_edges,
-                           pq_conf.M,
-                           pq_conf.efConstruction);
+    // //==================
+    // // Initialize Index
+    // //==================
+    // index->build_quantizer(path_centroids,
+    //                        path_info,
+    //                        path_edges,
+    //                        pq_conf.M,
+    //                        pq_conf.efConstruction);
 
     //==========
     // Train PQ

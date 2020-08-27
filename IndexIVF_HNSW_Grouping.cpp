@@ -1291,19 +1291,6 @@ out:
         return 0;
     }
 
-    void IndexIVF_HNSW_Grouping::get_path_info(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index)
-    {
-        sprintf(path_index, "%s/hnsw_M%lu_ef%lu.bin", sys_conf.path_base_model, pq_conf.M, pq_conf.efConstruction);
-    }
-    void IndexIVF_HNSW_Grouping::get_path_edges(const system_conf_t &sys_conf, const pq_conf_t &pq_conf, char *path_index)
-    {
-        sprintf(path_index, "%s/hnsw_M%lu_ef%lu.ivecs", sys_conf.path_base_model, pq_conf.M, pq_conf.efConstruction);
-    }
-
-    void IndexIVF_HNSW_Grouping::get_path_centroids(const system_conf_t &sys_conf, char *path_index) {
-        sprintf(path_index, "%s/centroids_sift1b.fvecs", sys_conf.path_base_data);
-    }
-
     void IndexIVF_HNSW_Grouping::get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char* path_index)
     {
         sprintf(path_index, "%s/%lu/ivfhnsw_OPQ%lu_nsubc%lu_%lu.index",

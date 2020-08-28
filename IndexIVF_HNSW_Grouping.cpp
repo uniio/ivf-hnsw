@@ -433,6 +433,158 @@ namespace ivfhnsw
         }
     }
 
+    int IndexIVF_HNSW_Grouping::load_sys_conf() {
+        int rc;
+
+        if (db_p == nullptr) {
+            rc = prepare_db();
+            if (rc) {
+                std::cout << "Failed to connect to database" << std::endl;
+                return rc;
+            }
+        }
+
+        // get system configuration
+        rc = db_p->GetSysConfig(sys_conf);
+        if (rc) {
+            std::cout << "Failed to get system configure" << std::endl;
+            return rc;
+        }
+
+        // get current batch list
+        rc = db_p->GetBatchList(batch_list);
+        if (rc) {
+            std::cout << "Failed to get batch list" << std::endl;
+            return rc;
+        }
+
+        return rc;
+    }
+
+    // get vector count in every batch
+    int IndexIVF_HNSW_Grouping::get_batchs_attr() {
+        int    rc;
+        size_t sz;
+
+        sz = batch_list.size();
+        if (sz == 0) {
+            rc = db_p->GetBatchList(batch_list);
+            if (rc) {
+                std::cout << "Failed to get batch list" << std::endl;
+                return rc;
+            }
+
+            sz = batch_list.size();
+            if (sz == 0) {
+                std::cout << "BUG: batch_info table cannot empty when call this function" << std::endl;
+                assert(0);
+            }
+        }
+
+        for (auto i = 0; i < sz; i++) {
+            auto _batch = batch_list[i];
+
+            struct stat st;
+            char        path_batch[1024];
+            get_path_vector(sys_conf, _batch.batch, path_batch);
+            int rc = stat(path_batch, &st);
+            if (rc) {
+                std::cout << "Failed to access " << path_batch << std::endl;
+                return rc;
+            }
+
+            // 'vector id' 4 bytes
+            // 'dim of vector' 4 bytes
+            // 'vector' dim bytes
+            size_t rec_size   = sizeof(uint32_t) + sizeof(uint32_t) + d * sizeof(uint8_t);
+            _batch.batch_size = st.st_size / rec_size;
+        }
+
+        return 0;
+    }
+
+    // get batch index and vector no in batch file by order number in index
+    int IndexIVF_HNSW_Grouping::getBatchByLabel(long label, size_t& vec_no) {
+        size_t sz        = batch_list.size();
+        size_t sz_t      = 0;
+        bool   not_found = true;
+
+        for (auto i = 0; i < sz; i++) {
+            sz_t += batch_list[i].batch_size;
+            if (sz_t >= label) {
+                vec_no = batch_list[i].batch_size - (sz_t - label);
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    int IndexIVF_HNSW_Grouping::get_vec_id(const char* vec_path, size_t vec_no, size_t& vec_id) {
+        std::ifstream fs_input;
+        int           rc      = 0;
+        size_t        len_rec = sizeof(uint32_t) + sizeof(uint32_t) + d * sizeof(uint8_t);
+
+        try {
+            fs_input.open(vec_path, std::ios::binary);
+            fs_input.seekg(len_rec, fs_input.beg);
+            read_variable(fs_input, vec_id);
+        }
+        catch (...) {
+            std::cout << "Error when read index file: " << vec_path << std::endl;
+            rc = -1;
+        }
+        if (fs_input.is_open())
+            fs_input.close();
+
+        return rc;
+    }
+
+    int IndexIVF_HNSW_Grouping::search(size_t k, const uint8_t* query, std::vector<size_t>& id_vectors) {
+        float query_f[d];
+
+        for (int i = 0; i < d; i++) {
+            query_f[i] = 1.0 * query[i];
+        }
+
+        return search(k, query_f, id_vectors);
+    }
+
+    int IndexIVF_HNSW_Grouping::search(size_t k, const float* query, std::vector<size_t>& id_vectors) {
+        float distances_base[k];
+        long  labels_base[k];
+
+        search(k, query, distances_base, labels_base);
+
+        /*
+         *  get vector id from disk according to result's lablel value (vector index in base vector file)
+         */
+        SearchInfo_t sret;
+        char         path_batch[1024];
+        size_t       vec_no, vec_id;
+        int          rc;
+        for (int di = k - 1; di >= 0; di--) {
+            int batch_idx = getBatchByLabel(labels_base[di], vec_no);
+            if (batch_idx == -1) {
+                std::cout << "Failed to get batch info from lable" << std::endl;
+                return -1;
+            }
+
+            get_path_vector(sys_conf, batch_idx, path_batch);
+
+            std::cout << "Get vector batch path: " << path_batch << " by index order: " << labels_base[di] << std::endl;
+            rc = get_vec_id(path_batch, vec_no, vec_id);
+            if (rc == -1) {
+                std::cout << "Failed to get vector id from batch file " << path_batch << std::endl;
+                return -1;
+            }
+            std::cout << "Get vector id: " << vec_id << " by index order: " << labels_base[di] << std::endl;
+
+            id_vectors.push_back(vec_id);
+        }
+
+        return 0;
+    }
+
     int IndexIVF_HNSW_Grouping::prepare_db()
     {
         int rc = 0;

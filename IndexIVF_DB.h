@@ -19,6 +19,7 @@ typedef struct {
     bool valid;
     int ts;
     bool no_precomputed_idx;
+    size_t batch_size;
 } batch_info_t;
 
 class Index_DB {

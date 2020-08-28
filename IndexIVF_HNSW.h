@@ -6,6 +6,10 @@
 #include <cstdio>
 #include <unordered_map>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <faiss/index_io.h>
 #include <faiss/Heap.h>
 #include <faiss/ProductQuantizer.h>

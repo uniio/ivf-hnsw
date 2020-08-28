@@ -25,9 +25,12 @@ namespace ivfhnsw {
         std::vector<std::vector<idx_t> > subgroup_sizes;      ///< Sizes of sub-groups for each group
         std::vector<float> alphas;    ///< Coefficients that determine the location of sub-centroids
 
+    private:
         Index_DB *db_p = nullptr;
         bool db_free = false;
 
+        system_conf_t sys_conf;
+        std::vector<batch_info_t> batch_list;
     public:
         IndexIVF_HNSW_Grouping(size_t dim, size_t ncentroids, size_t bytes_per_code,
                                size_t nbits_per_idx, size_t nsubcentroids);
@@ -36,6 +39,8 @@ namespace ivfhnsw {
                                size_t nbits_per_idx, size_t nsubcentroids, Index_DB *db_ref);
 
         ~IndexIVF_HNSW_Grouping();
+
+        int load_sys_conf();
 
         /** Add <group_size> vectors of dimension <d> from the <group_idx>-th group to the index.
           *
@@ -55,6 +60,9 @@ namespace ivfhnsw {
          *
          */
         void search(size_t k, const float *query, float *distances, long *labels);
+
+        int search(size_t k, const float* query, std::vector<size_t> &id_vectors);
+        int search(size_t k, const uint8_t* query, std::vector<size_t>& id_vectors);
 
         // apply disk search based on ANN search result
         void searchDisk(size_t k, const float *query, float *distances, long *labels, const char *path_base);
@@ -229,6 +237,10 @@ namespace ivfhnsw {
 
         int load_index(const system_conf_t &sys_conf, const size_t idx_ver);
 
+        int get_batchs_attr();
+
+        int getBatchByLabel(long label, size_t &vec_no);
+
       protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points
         std::vector<float> query_centroid_dists;
@@ -248,6 +260,10 @@ namespace ivfhnsw {
 
         float compute_alpha(const float *centroid_vectors, const float *points,
                             const float *centroid, const float *centroid_vector_norms_L2sqr, size_t group_size);
+
+        size_t getBatchByLabel(long label);
+
+        int get_vec_id(const char* vec_path, size_t vec_no, size_t& vec_id);
     };
 }
 #endif //IVF_HNSW_LIB_INDEXIVF_HNSW_GROUPING_H

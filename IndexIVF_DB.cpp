@@ -98,7 +98,7 @@ int Index_DB::GetBatchList(std::vector<batch_info_t> &batch_list) {
     return 0;
 }
 
-int Index_DB::GetLatestBatch(size_t &batch) {
+int Index_DB::GetLatestBatch(int &batch) {
     std::vector<batch_info_t> batch_list;
     int rc;
 
@@ -109,7 +109,7 @@ int Index_DB::GetLatestBatch(size_t &batch) {
     if (batch_list.size() != 0)
         batch = batch_list[batch_list.size() - 1].batch;
     else
-        batch = 0;
+        batch = -1;
 
     return 0;
 }

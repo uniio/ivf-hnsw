@@ -70,9 +70,6 @@ namespace ivfhnsw {
         int write(const char *path_index);
         int read(const char *path_index);
 
-        // similar as write function, except can truncate file before write
-        int write(const char *path_index, bool do_trunc);
-
         // setup database related things
         int setup_db(char *host, uint32_t port, char *db_nm, char *db_usr, char *pwd_usr);
 
@@ -210,18 +207,7 @@ namespace ivfhnsw {
          *
          */
         int build_batchs_to_index(const system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list);
-        /*
-         * Add vectors in a batch file into index
-         *
-         * @param path_base  base vector file full path
-         * @param path_precomputed_idx  precomputed index file file full path
-         *
-         * return value:
-         *  0  success to add the batch vector
-         * -1  failed to add the batch vector
-         *
-         */
-        int add_one_batch_to_index(const char *path_base, const char *path_precomputed_idx);
+        int add_one_batch_to_index(const system_conf_t &sys_conf, size_t batch_idx, bool final_add);
         void get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
         int save_index(const system_conf_t &sys_conf, const size_t idx_ver);
 
@@ -264,6 +250,20 @@ namespace ivfhnsw {
         size_t getBatchByLabel(long label);
 
         int get_vec_id(const char* vec_path, size_t vec_no, size_t& vec_id);
+
+        /*
+         * Add vectors in a batch file into index
+         *
+         * @param path_base  base vector file full path
+         * @param path_precomputed_idx  precomputed index file file full path
+         *
+         * return value:
+         *  0  success to add the batch vector
+         * -1  failed to add the batch vector
+         *
+         */
+        int add_one_batch_to_index(const char* path_base, const char* path_precomputed_idx);
+        int add_one_batch_to_index(const system_conf_t& sys_conf, size_t batch_idx);
     };
 }
 #endif //IVF_HNSW_LIB_INDEXIVF_HNSW_GROUPING_H

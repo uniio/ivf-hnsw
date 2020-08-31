@@ -212,7 +212,7 @@ add_loop:
 
         // Save index, pq and norm_pq 
         std::cout << "Saving index to " << opt.path_index << std::endl;
-        index->write(index_nm, true);
+        index->write(index_nm);
     }
     // For correct search using OPQ encoding rotate points in the coarse quantizer
     if (opt.do_opq) {

@@ -605,16 +605,13 @@ namespace ivfhnsw
         return db_p->ActiveBatch(batch_idx);
     }
 
-    int IndexIVF_HNSW_Grouping::write(const char *path_index, bool do_trunc)
+    int IndexIVF_HNSW_Grouping::write(const char *path_index)
     {
         std::ofstream output;
         int rc = 0;
 
         try {
-            if (do_trunc)
-                output.open(path_index, std::ios::binary | std::ios::trunc);
-            else
-                output.open(path_index, std::ios::binary);
+            output.open(path_index, std::ios::binary | std::ios::trunc);
 
             write_variable(output, d);
             write_variable(output, nc);
@@ -659,11 +656,6 @@ namespace ivfhnsw
         if (rc) unlink(path_index);
 
         return rc;
-    }
-
-    int IndexIVF_HNSW_Grouping::write(const char *path_index)
-    {
-        return this->write(path_index, false);
     }
 
     int IndexIVF_HNSW_Grouping::read(const char *path_index)
@@ -1325,6 +1317,39 @@ out:
         return rc;
     }
 
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const system_conf_t &sys_conf, size_t batch_idx, bool final_add)
+    {
+        int rc;
+
+        rc = add_one_batch_to_index(sys_conf, batch_idx);
+        if (rc) {
+            std::cout << "Failed to add batch vector: " << batch_idx << std::endl;
+            return rc;
+        }
+
+        if (final_add) {
+            // Computing centroid norms and inter-centroid distances
+            std::cout << "Computing centroid norms" << std::endl;
+            compute_centroid_norms();
+            std::cout << "Computing centroid dists" << std::endl;
+            compute_inter_centroid_dists();
+        }
+    }
+
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const system_conf_t &sys_conf, size_t batch_idx)
+    {
+        int rc;
+        char path_vector[1024];
+        char path_precomputed_idx[1024];
+
+        // get vector file path and precomputed index file path
+        // TODO: notice 03lu, because we use 1000 vector, format should be 001 002
+        sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs", sys_conf.path_base_data, batch_idx);
+        sprintf(path_precomputed_idx, "%s/split_1000/precomputed_idxs_%03lu.ivecs", sys_conf.path_base_data, batch_idx);
+
+        return add_one_batch_to_index(path_vector, path_precomputed_idx);
+    }
+
     int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const char *path_vector,
                                                        const char *path_precomputed_idx)
     {
@@ -1338,8 +1363,10 @@ out:
 
         // get vector number in the batch of vector file
         rc = get_vec_attr(path_vector, dim, nvecs);
-        if (rc)
+        if (rc) {
+            std::cout << "Failed to access vector file: " << path_vector << std::endl;
             return rc;
+        }
 
         std::cout << "Build index for file: " << path_vector << " " << path_precomputed_idx << std::endl;
         StopW stopw = StopW();
@@ -1496,12 +1523,6 @@ out:
         char path_index[1024], path_index_dir[1024], *ptr;
         int rc;
 
-        // Computing centroid norms and inter-centroid distances
-        std::cout << "Computing centroid norms"<< std::endl;
-        compute_centroid_norms();
-        std::cout << "Computing centroid dists"<< std::endl;
-        compute_inter_centroid_dists();
-
         // Save index, always truncate file
         get_path_index(sys_conf, idx_ver, path_index);
         strcpy(path_index_dir, path_index);
@@ -1514,7 +1535,7 @@ out:
         }
         std::cout << "Saving index to " << path_index << std::endl;
 
-        return write(path_index, true);
+        return write(path_index);
     }
 
     int IndexIVF_HNSW_Grouping::build_batchs_to_index(const system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list)
@@ -1544,14 +1565,12 @@ out:
 
         auto sz = batch_list.size();
         for (size_t i = 0; i < sz; i++) {
-            // get vector file path and precomputed index file path
-            // TODO: notice 03lu, because we use 1000 vector, format should be 001 002
-            sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs", sys_conf.path_base_data, batch_list[i]);
-            sprintf(path_precomputed_idx, "%s/split_1000/precomputed_idxs_%03lu.ivecs", sys_conf.path_base_data, batch_list[i]);
-
-            rc = add_one_batch_to_index(path_vector, path_precomputed_idx);
+            if (i == sz - 1)
+                rc = add_one_batch_to_index(sys_conf, batch_list[i], true);
+            else
+                rc = add_one_batch_to_index(sys_conf, batch_list[i], false);
             if (rc) {
-                std::cout << "Failed to add vector from file: " << path_vector << " to index" << std::endl;
+                std::cout << "Failed to add vector batch " << batch_list[i] << " to index" << std::endl;
                 return -1;
             }
         }
@@ -1635,6 +1654,12 @@ out:
         // return batch range to build index
         batch_start = batchs_to_index[0];
         batch_end = batchs_to_index[batchs_to_index.size() - 1];
+
+        // Computing centroid norms and inter-centroid distances
+        std::cout << "Computing centroid norms" << std::endl;
+        compute_centroid_norms();
+        std::cout << "Computing centroid dists" << std::endl;
+        compute_inter_centroid_dists();
 
     out:
         return rc;

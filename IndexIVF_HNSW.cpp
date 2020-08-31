@@ -638,18 +638,14 @@ namespace ivfhnsw {
 
     /*
      * Write index
-     * do_trunc == true, will truncate file before write
      */
-    int IndexIVF_HNSW::write(const char *path_index, bool do_trunc)
+    int IndexIVF_HNSW::write(const char *path_index)
     {
         std::ofstream output;
         int rc = 0;
 
         try {
-            if (do_trunc)
-                output.open(path_index, std::ios::binary | std::ios::trunc);
-            else
-                output.open(path_index, std::ios::binary);
+            output.open(path_index, std::ios::binary | std::ios::trunc);
 
             write_variable(output, d);
             write_variable(output, nc);
@@ -677,12 +673,6 @@ namespace ivfhnsw {
         if (rc) unlink(path_index);
 
         return rc;
-    }
-
-    // Write index
-    int IndexIVF_HNSW::write(const char *path_index)
-    {
-        return this->write(path_index, false);
     }
 
     // Write index

@@ -212,7 +212,7 @@ add_loop:
         index->compute_inter_centroid_dists();
 
         // Save index, pq and norm_pq 
-        index->write(index_nm, true);
+        index->write(index_nm);
 
         std::cout << "Saving index to " << index_nm<< std::endl;
         if (index->prepare_db()) {

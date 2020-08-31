@@ -1210,6 +1210,28 @@ out:
         return 0;
     }
 
+    int IndexIVF_HNSW_Grouping::build_one_prcomputed_index(system_conf_t &sys_conf, size_t batch_idx)
+    {
+        char path_vector[1024], path_precomputed_idx[1024];
+        int rc;
+
+        get_path_vector(sys_conf, batch_idx, path_vector);
+        get_path_precomputed_idx(sys_conf, batch_idx, path_precomputed_idx);
+        std::cout << "Build precomputed index for vector: " << path_vector << std::endl;
+        rc = build_prcomputed_index(path_vector, path_precomputed_idx);
+        if (rc) {
+            std::cout << "Failed to build precomputing index for batch: " << batch_idx << std::endl;
+            return rc;
+        }
+        rc = db_p->ActivePrecomputedIndex(batch_idx);
+        if (rc) {
+            std::cout << "Failed to active precomputing index for batch: " << batch_idx << std::endl;
+            return rc;
+        }
+
+        return 0;
+    }
+
     int IndexIVF_HNSW_Grouping::build_prcomputed_index(system_conf_t &sys_conf, size_t skip_batch)
     {
         std::vector<batch_info_t> batch_list;
@@ -1227,17 +1249,9 @@ out:
             if (a_batch.valid == false || a_batch.no_precomputed_idx == false)
                 continue;
 
-            get_path_vector(sys_conf, a_batch.batch, path_vector);
-            get_path_precomputed_idx(sys_conf, a_batch.batch, path_precomputed_idx);
-            std::cout << "Build precomputed index for vector: " <<  path_vector << std::endl;
-            rc = build_prcomputed_index(path_vector, path_precomputed_idx);
+            rc = build_one_prcomputed_index(sys_conf, a_batch.batch);
             if (rc) {
-                std::cout << "Failed to build precomputing index for batch: " <<  a_batch.batch << std::endl;
-                return rc;
-            }
-            rc = db_p->ActivePrecomputedIndex(a_batch.batch);
-            if (rc) {
-                std::cout << "Failed to active precomputing index for batch: " <<  a_batch.batch << std::endl;
+                std::cout << "Failed to build precomputing index for batch: " << a_batch.batch << std::endl;
                 return rc;
             }
         }

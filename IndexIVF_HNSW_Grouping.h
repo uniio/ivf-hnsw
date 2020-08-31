@@ -152,7 +152,7 @@ namespace ivfhnsw {
          * may be we cannot process vector file which has vector number more than 100W
          * caller must ensure not exceed this limit
          */
-        int build_prcomputed_index(const char *path_base, const char *path_prcomputed_index);
+        int build_precomputed_index(const char *path_base, const char *path_prcomputed_index);
 
         /*
          * Build Precomputed Index files
@@ -165,7 +165,7 @@ namespace ivfhnsw {
          * skip_batch used to skip given batch, that is batch which service1b current used
          *
          */
-        int build_prcomputed_index(system_conf_t &sys_conf, size_t skip_batch);
+        int build_precomputed_index(system_conf_t &sys_conf, size_t skip_batch);
 
         int build_one_precomputed_index(system_conf_t &sys_conf, size_t batch_idx);
 

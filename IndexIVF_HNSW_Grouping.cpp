@@ -1218,7 +1218,7 @@ out:
         get_path_vector(sys_conf, batch_idx, path_vector);
         get_path_precomputed_idx(sys_conf, batch_idx, path_precomputed_idx);
         std::cout << "Build precomputed index for vector: " << path_vector << std::endl;
-        rc = build_prcomputed_index(path_vector, path_precomputed_idx);
+        rc = build_precomputed_index(path_vector, path_precomputed_idx);
         if (rc) {
             std::cout << "Failed to build precomputing index for batch: " << batch_idx << std::endl;
             return rc;
@@ -1232,7 +1232,7 @@ out:
         return 0;
     }
 
-    int IndexIVF_HNSW_Grouping::build_prcomputed_index(system_conf_t &sys_conf, size_t skip_batch)
+    int IndexIVF_HNSW_Grouping::build_precomputed_index(system_conf_t &sys_conf, size_t skip_batch)
     {
         std::vector<batch_info_t> batch_list;
         char path_vector[1024], path_precomputed_idx[1024];
@@ -1259,7 +1259,7 @@ out:
         return 0;
     }
 
-    int IndexIVF_HNSW_Grouping::build_prcomputed_index(const char *path_base, const char *path_prcomputed_index)
+    int IndexIVF_HNSW_Grouping::build_precomputed_index(const char *path_base, const char *path_prcomputed_index)
     {
         uint32_t dim;
         size_t nvecs;
@@ -1563,7 +1563,7 @@ out:
                 get_path_vector(sys_conf, batch_list[i].batch, path_vector);
                 get_path_precomputed_idx(sys_conf, batch_list[i].batch, path_vector);
                 std::cout << "Build precomputed index for vector of batch: " << batch_list[i].batch << std::endl;
-                int rc = build_prcomputed_index(path_vector, path_precomputed_idx);
+                int rc = build_precomputed_index(path_vector, path_precomputed_idx);
             }
             b_list.push_back(batch_list[i].batch);
         }

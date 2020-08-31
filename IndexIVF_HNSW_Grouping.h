@@ -167,7 +167,7 @@ namespace ivfhnsw {
          */
         int build_prcomputed_index(system_conf_t &sys_conf, size_t skip_batch);
 
-        int build_one_prcomputed_index(system_conf_t &sys_conf, size_t batch_idx);
+        int build_one_precomputed_index(system_conf_t &sys_conf, size_t batch_idx);
 
 
         /*

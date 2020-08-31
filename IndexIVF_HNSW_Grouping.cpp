@@ -1210,7 +1210,7 @@ out:
         return 0;
     }
 
-    int IndexIVF_HNSW_Grouping::build_one_prcomputed_index(system_conf_t &sys_conf, size_t batch_idx)
+    int IndexIVF_HNSW_Grouping::build_one_precomputed_index(system_conf_t &sys_conf, size_t batch_idx)
     {
         char path_vector[1024], path_precomputed_idx[1024];
         int rc;
@@ -1249,7 +1249,7 @@ out:
             if (a_batch.valid == false || a_batch.no_precomputed_idx == false)
                 continue;
 
-            rc = build_one_prcomputed_index(sys_conf, a_batch.batch);
+            rc = build_one_precomputed_index(sys_conf, a_batch.batch);
             if (rc) {
                 std::cout << "Failed to build precomputing index for batch: " << a_batch.batch << std::endl;
                 return rc;

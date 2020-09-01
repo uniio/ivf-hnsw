@@ -99,6 +99,7 @@ namespace ivfhnsw {
         auto vec_off = vec_id * (sizeof(uint32_t) + dim);
 
         std::ifstream fs_input(path_base, std::ios::binary);
+        fs_input.exceptions(~fs_input.goodbit);
         fs_input.seekg(vec_off, fs_input.beg);
         readXvecFvec<uint8_t>(fs_input, data, dim, 1);
         fs_input.close();
@@ -109,6 +110,7 @@ namespace ivfhnsw {
         auto centroid_off = centroid_idx * (sizeof(uint32_t) + dim * sizeof(float));
 
         std::ifstream fs_input(path_centroid, std::ios::binary);
+        fs_input.exceptions(~fs_input.goodbit);
         fs_input.seekg(centroid_off, fs_input.beg);
         readXvec<float>(fs_input, data, dim);
         fs_input.close();
@@ -344,6 +346,7 @@ namespace ivfhnsw {
         }
 
         std::ifstream fs_input;
+        fs_input.exceptions(~fs_input.goodbit);
         try {
             fs_input.open(path_vec, std::ios::binary);
             fs_input.read((char *) &dim, sizeof(uint32_t));

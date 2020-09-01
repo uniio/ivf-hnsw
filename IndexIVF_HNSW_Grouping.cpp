@@ -314,6 +314,7 @@ namespace ivfhnsw
         std::vector<float> query_vector_dists;
         char *neighbour_log = "neighbour_hit.log";
         std::ofstream log_trace;
+        log_trace.exceptions(~log_trace.goodbit);
         log_trace.open(neighbour_log, std::ofstream::out | std::ofstream::app);
         if (!log_trace.is_open()) {
             std::cout << "Failed to open log file for neighbour traceing" << std::endl;
@@ -522,6 +523,7 @@ namespace ivfhnsw
 
     int IndexIVF_HNSW_Grouping::get_vec_id(const char* vec_path, size_t vec_no, size_t& vec_id) {
         std::ifstream fs_input;
+        fs_input.exceptions(~fs_input.goodbit);
         int           rc      = 0;
         size_t        len_rec = sizeof(uint32_t) + sizeof(uint32_t) + d * sizeof(uint8_t);
 
@@ -609,6 +611,7 @@ namespace ivfhnsw
     int IndexIVF_HNSW_Grouping::write(const char *path_index)
     {
         std::ofstream output;
+        output.exceptions(~output.goodbit);
         int rc = 0;
 
         try {
@@ -663,6 +666,7 @@ namespace ivfhnsw
     {
         int rc = 0;
         std::ifstream input;
+        input.exceptions(~input.goodbit);
 
         try {
             input.open(path_index, std::ios::binary);
@@ -1044,6 +1048,7 @@ namespace ivfhnsw
             trainvecs.resize(nvecs * dim);
             {
                  std::ifstream learn_input(path_learn, std::ios::binary);
+                 learn_input.exceptions(~learn_input.goodbit);
                  readXvecFvec<uint8_t>(learn_input, trainvecs.data(), dim, nvecs);
             }
             std::cout << "Get train vector count: " << nvecs << std::endl;
@@ -1272,7 +1277,9 @@ out:
         StopW stopw = StopW();
 
         std::ifstream input(path_base, std::ios::binary);
+        input.exceptions(~input.goodbit);
         std::ofstream output(path_prcomputed_index, std::ios::binary | std::ios::trunc);
+        output.exceptions(~output.goodbit);
 
         if (!input.is_open()) {
             std::cout << "Failed to open base vector file: " << path_base << std::endl;
@@ -1433,7 +1440,9 @@ out:
             // Iterate through the dataset extracting points from groups,
             // whose ids lie in [ngroups_added, ngroups_added + groups_per_iter)
             std::ifstream base_input(path_vector, std::ios::binary);
+            base_input.exceptions(~base_input.goodbit);
             std::ifstream idx_input(path_precomputed_idx, std::ios::binary);
+            idx_input.exceptions(~idx_input.goodbit);
 
             for (size_t b = 0; b < nbatches; b++) {
                 // get correct batch_size value, because

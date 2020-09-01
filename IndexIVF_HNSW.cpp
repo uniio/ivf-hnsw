@@ -95,6 +95,7 @@ namespace ivfhnsw {
 
         std::cout << "Constructing quantizer\n";
         std::ifstream input(path_data, std::ios::binary);
+        input.exceptions(~input.goodbit);
 
         size_t report_every = 100000;
         for (size_t i = 0; i < nc; i++) {
@@ -344,6 +345,7 @@ namespace ivfhnsw {
         char *hit_log = "centroids_hit.log";
         char *miss_log = "centroids_miss.log";
         std::ofstream log_trace;
+        log_trace.exceptions(~log_trace.goodbit);
         if (missed)
             log_trace.open(miss_log, std::ofstream::out | std::ofstream::app);
         else
@@ -642,6 +644,7 @@ namespace ivfhnsw {
     int IndexIVF_HNSW::write(const char *path_index)
     {
         std::ofstream output;
+        output.exceptions(~output.goodbit);
         int rc = 0;
 
         try {
@@ -681,6 +684,7 @@ namespace ivfhnsw {
     {
         char path_f[1024];
         std::ofstream output;
+        output.exceptions(~output.goodbit);
         int rc = 0;
 
         try {
@@ -689,6 +693,7 @@ namespace ivfhnsw {
                 sprintf(path_f, "%s/hdr.vec", home_dir);
                 std::cout << "write file: " << path_f << std::endl;
                 std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
+                output.exceptions(~output.goodbit);
 
                 /*
                  * hdr_idx.efConstruction already set by build_quantizer function
@@ -717,6 +722,7 @@ namespace ivfhnsw {
                 sprintf(path_f, "%s/cnorms.vec", home_dir);
                 std::cout << "write file: " << path_f << std::endl;
                 std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
+                output.exceptions(~output.goodbit);
                 write_vector(output, centroid_norms);
                 output.close();
             }
@@ -725,6 +731,7 @@ namespace ivfhnsw {
             {
                 sprintf(path_f, "%s/pq.vec", home_dir);
                 std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
+                output.exceptions(~output.goodbit);
                 for (size_t i = 0; i < nc; i++)
                     write_vector(output, codes[i]);
                 output.close();
@@ -743,6 +750,7 @@ namespace ivfhnsw {
 
                     sprintf(path_f, "%s/opq.vec", home_dir);
                     std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
+                    output.exceptions(~output.goodbit);
                     write_vector(output, copy_centroid);
                     output.close();
                 }
@@ -752,6 +760,7 @@ namespace ivfhnsw {
             {
                 sprintf(path_f, "%s/normpq.vec", home_dir);
                 std::ofstream output(path_f, std::ios::binary | std::ios::trunc);
+                output.exceptions(~output.goodbit);
                 for (size_t i = 0; i < nc; i++)
                     write_vector(output, norm_codes[i]);
                 output.close();
@@ -779,6 +788,7 @@ namespace ivfhnsw {
     {
         int rc = 0;
         std::ifstream input;
+        input.exceptions(~input.goodbit);
 
         try {
             input.open(path_index, std::ios::binary);

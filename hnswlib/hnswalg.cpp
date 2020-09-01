@@ -235,8 +235,8 @@ std::priority_queue<std::pair<float, idx_t>> HierarchicalNSW::searchKnn(const fl
 
 void HierarchicalNSW::SaveInfo(const std::string &location)
 {
-    std::cout << "Saving info to " << location << std::endl;
     std::ofstream output(location, std::ios::binary);
+    output.exceptions(~output.goodbit);
 
     writeBinaryPOD(output, maxelements_);
     writeBinaryPOD(output, enterpoint_node);
@@ -246,13 +246,14 @@ void HierarchicalNSW::SaveInfo(const std::string &location)
     writeBinaryPOD(output, M_);
     writeBinaryPOD(output, maxM_);
     writeBinaryPOD(output, size_links_level0);
+    std::cout << "Saving info to " << location << std::endl;
 }
 
 
 void HierarchicalNSW::SaveEdges(const std::string &location)
 {
-    std::cout << "Saving edges to " << location << std::endl;
     std::ofstream output(location, std::ios::binary);
+    output.exceptions(~output.goodbit);
 
     for (size_t i = 0; i < maxelements_; i++) {
         uint8_t *ll_cur = get_linklist0(i);
@@ -262,12 +263,14 @@ void HierarchicalNSW::SaveEdges(const std::string &location)
         idx_t *data = (idx_t *)(ll_cur + 1);
         output.write((char *) data, sizeof(idx_t) * size);
     }
+    std::cout << "Saving edges to " << location << std::endl;
 }
 
 void HierarchicalNSW::LoadInfo(const std::string &location)
 {
     std::cout << "Loading info from " << location << std::endl;
     std::ifstream input(location, std::ios::binary);
+    input.exceptions(~input.goodbit);
 
     readBinaryPOD(input, maxelements_);
     readBinaryPOD(input, enterpoint_node);
@@ -291,6 +294,7 @@ void HierarchicalNSW::LoadData(const std::string &location)
 {
     std::cout << "Loading data from " << location << std::endl;
     std::ifstream input(location, std::ios::binary);
+    input.exceptions(~input.goodbit);
 
     uint32_t dim;
     float mass[d_];
@@ -309,6 +313,7 @@ void HierarchicalNSW::LoadEdges(const std::string &location)
 {
     std::cout << "Loading edges from " << location << std::endl;
     std::ifstream input(location, std::ios::binary);
+    input.exceptions(~input.goodbit);
 
     uint32_t size;
 

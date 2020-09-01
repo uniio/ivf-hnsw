@@ -1735,6 +1735,12 @@ out:
             return rc;
         }
 
-        return deleteBatchFiles(sys_conf, batch_list);
+        rc = deleteBatchFiles(sys_conf, batch_list);
+        if (rc) {
+            std::cout << "Failed in " << __FILE__ << " : " << __LINE__ << std::endl;
+            return rc;
+        }
+
+        return db_p->DeleteBatchByTime(time_del);
     }
 }

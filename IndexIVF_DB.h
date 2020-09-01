@@ -89,6 +89,8 @@ class Index_DB {
 
     int GetLatestBatch(int &batch);
 
+    int DeleteBatchByTime(time_t time_del);
+
   private:
     int DropTable(char *tbl_nm);
     int CmdWithTrans(char *sql_str);

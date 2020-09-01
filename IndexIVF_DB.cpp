@@ -114,6 +114,28 @@ int Index_DB::GetLatestBatch(int &batch) {
     return 0;
 }
 
+int Index_DB::GetBatchListByTime(std::vector<batch_info_t> &batch_list, time_t time_del) {
+    std::vector<batch_info_t> batch_list_tmp;
+    int rc;
+    size_t sz;
+
+    // TODO: get list from database directly, filter records by SQL
+    // current we use post filter by for loop only for convinent
+    rc = GetBatchList(batch_list_tmp);
+    if (rc) {
+        std::cout << "Failed to get batch info from database" << std::endl;
+        return rc;
+    }
+
+    for (size_t i = 0; i < sz; i++) {
+        if (batch_list_tmp[i].ts < time_del) {
+            batch_list.push_back(batch_list_tmp[i]);
+        }
+    }
+
+    return 0;
+}
+
 int Index_DB::SetSysConfig(system_conf_t &sys_conf) {
     PGresult *res;
     char sql_str[1024];

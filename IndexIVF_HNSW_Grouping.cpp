@@ -1,6 +1,7 @@
 #include "IndexIVF_HNSW_Grouping.h"
 #include <unistd.h>
 #include <algorithm>
+#include <time.h>
 
 // #define TRACE_NEIGHBOUR
 
@@ -504,7 +505,7 @@ namespace ivfhnsw
     }
 
     // get batch index and vector no in batch file by order number in index
-    int IndexIVF_HNSW_Grouping::getBatchByLabel(long label, size_t& vec_no) {
+    int IndexIVF_HNSW_Grouping::getBatchByLabel(long label, size_t &vec_no) {
         size_t sz        = batch_list.size();
         size_t sz_t      = 0;
         bool   not_found = true;
@@ -1677,5 +1678,54 @@ out:
 
     out:
         return rc;
+    }
+
+    int IndexIVF_HNSW_Grouping::deleteBatchFile(system_conf_t &sys_conf, size_t batch_idx)
+    {
+        char path_batch[1024], path_precomputed_idx[1024];
+
+        get_path_vector(sys_conf, batch_idx, path_batch);
+        get_path_precomputed_idx(sys_conf, batch_idx, path_precomputed_idx);
+
+        if (exists(path_precomputed_idx) && unlink(path_precomputed_idx)) {
+            std::cout << "Failed to delete precomputed index: " << path_precomputed_idx << std::endl;
+            return -1;
+        }
+
+        if (exists(path_batch) && unlink(path_batch)) {
+            std::cout << "Failed to delete batch vector: " << path_batch << std::endl;
+            return -1;
+        }
+
+        return 0;
+    }
+
+    int IndexIVF_HNSW_Grouping::deleteBatchFiles(system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list)
+    {
+        char   path_batch[1024], path_precomputed_idx[1024];
+        size_t sz = batch_list.size();
+
+        for (size_t i = 0; i < sz; i++) {
+            size_t batch_idx = batch_list[i].batch;
+            if (deleteBatchFile(sys_conf, batch_idx)) {
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    int IndexIVF_HNSW_Grouping::deleteBatchByTime(time_t time_del)
+    {
+        std::vector<batch_info_t> batch_list;
+        int rc;
+
+        rc = db_p->GetBatchListByTime(batch_list, time_del);
+        if (rc) {
+            std::cout << "Failed in " << __FILE__ << " : " << __LINE__ << std::endl;
+            return rc;
+        }
+
+        return deleteBatchFiles(sys_conf, batch_list);
     }
 }

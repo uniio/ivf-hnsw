@@ -229,6 +229,11 @@ namespace ivfhnsw {
 
         int getBatchByLabel(long label, size_t &vec_no);
 
+        int deleteBatchByTime(time_t time_del);
+        int deleteBatchFile(system_conf_t &sys_conf, size_t batch_idx);
+        int deleteBatchFiles(system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list);
+
+
       protected:
         /// Distances to the coarse centroids. Used for distance computation between a query and base points
         std::vector<float> query_centroid_dists;

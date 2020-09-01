@@ -17,7 +17,7 @@ typedef struct {
     size_t batch;
     size_t start_id;
     bool valid;
-    int ts;
+    time_t ts;
     bool no_precomputed_idx;
     size_t batch_size;
 } batch_info_t;
@@ -63,7 +63,23 @@ class Index_DB {
     int GetLatestPQInfo(size_t &ver, bool &with_opq, size_t &code_size, size_t &nsubc);
     int AppendPQConf(pq_conf_t &pq_conf);
     int GetLatestPQConf(pq_conf_t &pq_conf);
+
+    /*
+     *  Get all of batch info in system
+     *
+     *  @param  batch_list  list of batch info
+     *
+     */
     int GetBatchList(std::vector<batch_info_t> &batch_list);
+
+    /*
+     *  Get all of batch info in system before a given timestamp
+     *
+     *  @param  batch_list  list of batch info
+     *  @param  time_del    batch vector file generated before time_del will be returned
+     *
+     */
+    int GetBatchListByTime(std::vector<batch_info_t> &batch_list, time_t time_del);
 
     int AppendIndexInfo(size_t idx_ver, size_t batch_start, size_t batch_end);
     int GetLatestIndexInfo(size_t &ver, size_t &batch_start, size_t &batch_end);

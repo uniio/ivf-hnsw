@@ -105,7 +105,7 @@ namespace ivfhnsw {
           * @param rebuild             whether rebuild quantizer, rebuild means remove previous quantizer files
           *                            and generate new quantizer files
         */
-        void build_quantizer(const char *path_data, const char *path_info, const char *path_edges,
+        int build_quantizer(const char *path_data, const char *path_info, const char *path_edges,
                              size_t M=16, size_t efConstruction = 500);
 
         int build_quantizer(const char *path_data, const char *path_info, const char *path_edges,

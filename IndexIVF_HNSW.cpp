@@ -1,5 +1,6 @@
 #include <fstream>
 #include <fstream>
+#include <string>
 #include <unistd.h>
 #include <sys/stat.h>
 #include "IndexIVF_HNSW.h"
@@ -38,6 +39,7 @@ namespace ivfhnsw {
                                         const char* path_edges, size_t M,
                                         size_t efConstruction, bool rebuild)
     {
+        int rc = 0;
         if (rebuild) {
             unlink(path_info);
             unlink(path_edges);
@@ -48,8 +50,8 @@ namespace ivfhnsw {
             }
         }
 
-        build_quantizer(path_data, path_info, path_edges, M, efConstruction);
-        return 0;
+        rc = build_quantizer(path_data, path_info, path_edges, M, efConstruction);
+        return rc;
     }
 
     int IndexIVF_HNSW::build_quantizer(system_conf_t& sys_conf, pq_conf_t& pq_conf) 
@@ -64,7 +66,7 @@ namespace ivfhnsw {
         get_path_edges(sys_conf, pq_conf, path_edges);
 
         try {
-            build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
+            rc = build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
         } catch (...) {
             rc = -1;
             std::cout << "Failed to save quantizer files" << std::endl;
@@ -80,16 +82,25 @@ namespace ivfhnsw {
      * Construction time is still acceptable: ~5 minutes for 1 million 96-d vectors
      * on Intel Xeon E5-2650 V2 2.60GHz.
      */
-    void IndexIVF_HNSW::build_quantizer(const char *path_data, const char *path_info,
+    int IndexIVF_HNSW::build_quantizer(const char *path_data, const char *path_info,
                                         const char *path_edges, size_t M,
                                         size_t efConstruction)
     {
         hdr_idx.efConstruction = efConstruction;
 
+        // check if path_base_model directory in table system_orca is exist
+        std::string path_conf = path_info;
+        std::string dir_conf = path_conf.substr(0, path_conf.find_last_of('/')+1);
+        std::fstream output(dir_conf, std::ios::in);
+        if(!output) {
+            std::cout << "WARNING: configure file directory " << dir_conf << " is not exist, please check!" << std::endl;
+            return -1;
+        }
+
         if (exists(path_info) && exists(path_edges)) {
             quantizer = new hnswlib::HierarchicalNSW(path_info, path_data, path_edges);
             quantizer->efSearch = efConstruction;
-            return;
+            return 0;
         }
         quantizer = new hnswlib::HierarchicalNSW(d, nc, M, 2 * M, efConstruction);
 
@@ -107,6 +118,7 @@ namespace ivfhnsw {
         }
         quantizer->SaveInfo(path_info);
         quantizer->SaveEdges(path_edges);
+        return 0;
     }
 
 

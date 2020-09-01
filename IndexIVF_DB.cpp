@@ -209,7 +209,7 @@ int Index_DB::AllocateBatch(size_t batch, size_t start_id) {
 int Index_DB::ActiveBatch(size_t batch) {
     char sql_str[512];
 
-    sprintf(sql_str, "UPDATE batch_info SET valid = TRUE WHERE batch = %lu", batch);
+    sprintf(sql_str, "UPDATE batch_info SET valid = TRUE, ts = current_timestamp WHERE batch = %lu", batch);
     return CmdWithTrans(sql_str);
 }
 

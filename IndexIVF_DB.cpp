@@ -247,6 +247,10 @@ int Index_DB::AllocateBatch(size_t batch, size_t start_id) {
     return CmdWithTrans(sql_str);
 }
 
+int Index_DB::CleanupBatch() {
+    return CmdWithTrans("TRUNCATE TABLE batch_info");
+}
+
 int Index_DB::ActiveBatch(size_t batch) {
     char sql_str[512];
 

@@ -24,4 +24,4 @@ SET( CMAKE_CXX_FLAGS  "-O2 -g -lrt -DNDEBUG -std=c++11 -DHAVE_CXX0X -openmp -mar
 target_link_libraries(ivf-hnsw faiss hnswlib pq)
 
 # build tests
-add_subdirectory(tests)
+# add_subdirectory(tests)

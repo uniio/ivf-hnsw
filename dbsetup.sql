@@ -87,9 +87,11 @@ INSERT INTO pq_conf(ver, with_opq, M, efConstruction, nt, nsubt) VALUES(1, TRUE,
 /*
   Setup batch_info table, which will be used by precomputed index build
 */
-INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(0, current_timestamp, TRUE, TRUE);
-INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(1, current_timestamp, TRUE, TRUE);
-INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(2, current_timestamp, TRUE, TRUE);
-INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(3, current_timestamp, TRUE, TRUE);
-INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(4, current_timestamp, TRUE, TRUE);
-INSERT INTO batch_info(batch, ts, valid, no_precomputed_idx) VALUES(5, current_timestamp, TRUE, TRUE);
+/*
+INSERT INTO batch_info("batch, start_id, ts, valid, no_precomputed_idx) VALUES(0, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info("batch, start_id, ts, valid, no_precomputed_idx) VALUES(1, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info("batch, start_id, ts, valid, no_precomputed_idx) VALUES(2, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info("batch, start_id, ts, valid, no_precomputed_idx) VALUES(3, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info("batch, start_id, ts, valid, no_precomputed_idx) VALUES(4, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info("batch, start_id, ts, valid, no_precomputed_idx) VALUES(5, 0, current_timestamp, TRUE, TRUE);
+*/

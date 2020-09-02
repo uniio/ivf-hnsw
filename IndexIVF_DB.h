@@ -52,6 +52,9 @@ class Index_DB {
      */
     int ActiveBatch(size_t batch);
 
+    // CleanupBatch used to delete all of records from batch_info table
+    int CleanupBatch();
+
     /*
      *  ActivePrecomputedIndex used to mark the batch, it means precomputed index for the batch is created
      *
@@ -88,6 +91,8 @@ class Index_DB {
     int GetSysConfig(system_conf_t &sys_conf);
 
     int GetLatestBatch(int &batch);
+
+    int DeleteBatchByTime(time_t time_del);
 
   private:
     int DropTable(char *tbl_nm);

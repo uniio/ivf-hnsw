@@ -114,6 +114,25 @@ int Index_DB::GetLatestBatch(int &batch) {
     return 0;
 }
 
+int Index_DB::DeleteBatchByTime(time_t time_del)
+{
+    char sql_s[1024], time_s[256];
+
+    struct tm t_ret;
+    if (gmtime_r(&time_del, &t_ret) == NULL) {
+        // force core dump to check failure
+        assert(0);
+    }
+
+    // convert time_t to timestamp of PostgreSQL
+    // ‘DD-MM-YYYY HH24:MI:SS'
+    // 是否要修正时间，不要那么紧，放宽一些
+    sprintf(time_s, "%u-%u-%u %u:%u:%u", t_ret.tm_mday, t_ret.tm_mon + 1, t_ret.tm_year + 1900, t_ret.tm_hour, t_ret.tm_min, t_ret.tm_sec);
+    sprintf(sql_s, "DELETE FROM batch_info WHERE ts < TO_TIMESTAMP(%s, ‘DD-MM-YYYY HH24:MI:SS')", time_s);
+
+    return CmdWithTrans(sql_s);
+}
+
 int Index_DB::GetBatchListByTime(std::vector<batch_info_t> &batch_list, time_t time_del) {
     std::vector<batch_info_t> batch_list_tmp;
     int rc;
@@ -226,6 +245,10 @@ int Index_DB::AllocateBatch(size_t batch, size_t start_id) {
             VALUES(%lu, %lu, NOW()::TIMESTAMP, FALSE, TRUE)",
             batch, start_id);
     return CmdWithTrans(sql_str);
+}
+
+int Index_DB::CleanupBatch() {
+    return CmdWithTrans("TRUNCATE TABLE batch_info");
 }
 
 int Index_DB::ActiveBatch(size_t batch) {

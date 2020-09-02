@@ -1202,6 +1202,7 @@ out:
     */
     int IndexIVF_HNSW_Grouping::load_quantizer(system_conf_t &sys_conf, pq_conf_t &pq_conf)
     {
+        int rc = 0;
         char path_centroids[1024], path_info[1024], path_edges[1024];
 
         get_path_centroids(sys_conf, path_centroids);
@@ -1211,9 +1212,14 @@ out:
         do_opq = pq_conf.with_opq;
 
         // TODO: mocify following function, force core dump when failed to build quantizer
-        build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
+        try {
+            rc = build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
+        } catch (...) {
+            rc = -1;
+            std::cout << "Failed to save quantizer files" << std::endl;
+        }
 
-        return 0;
+        return rc;
     }
 
     int IndexIVF_HNSW_Grouping::build_one_precomputed_index(system_conf_t &sys_conf, size_t batch_idx)

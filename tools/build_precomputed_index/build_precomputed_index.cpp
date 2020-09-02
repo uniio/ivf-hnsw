@@ -51,11 +51,15 @@ int main(int argc, char **argv) {
     // Initialize Index
     //==================
     IndexIVF_HNSW_Grouping* index = new IndexIVF_HNSW_Grouping(sys_conf.dim, sys_conf.nc, sys_conf.code_size, 8, sys_conf.nsubc, db_p);
-    index->load_quantizer(sys_conf, pq_conf);
+    rc = index->load_quantizer(sys_conf, pq_conf);
+    if (rc) {
+        std::cout << "Failed to load_quantizer" << std::endl;
+        exit(1);
+    }
 
     // build precomputed index for all of batch in system
     // TODO: in service1b the 2nd parameter should be batch number in active (ie. current used by service)
-    rc = index->build_prcomputed_index(sys_conf, sys_conf.batch_max);
+    rc = index->build_precomputed_index(sys_conf, sys_conf.batch_max);
     if (rc) {
         std::cout << "Failed to build precomputed index" << std::endl;
         exit(1);

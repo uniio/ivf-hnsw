@@ -50,7 +50,12 @@ namespace ivfhnsw {
             }
         }
 
-        rc = build_quantizer(path_data, path_info, path_edges, M, efConstruction);
+        try {
+            rc = build_quantizer(path_data, path_info, path_edges, M, efConstruction);
+        } catch (...) {
+            rc = -1;
+            std::cout << "Failed to save quantizer files" << std::endl;
+        }
         return rc;
     }
 
@@ -73,7 +78,6 @@ namespace ivfhnsw {
         }
 
         return rc;
-
     }
 
     /**

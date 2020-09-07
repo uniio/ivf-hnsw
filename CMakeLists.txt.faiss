@@ -21,7 +21,8 @@ else()
     set(BLAS_LIB ${OpenBLAS_LIB})
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC -m64 -Wall -g -O3  -msse4 -mpopcnt -fopenmp -Wno-sign-compare")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC -m64 -Wall -g -O3  -msse4 -mpopcnt -fopenmp -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC -m64 -Wall -g -O2 -mavx2 -mpopcnt -fopenmp -Wno-sign-compare")
 add_definitions(-DFINTEGER=int)
 
 # specify output bin_path and lib_path

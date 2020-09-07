@@ -1041,15 +1041,14 @@ namespace ivfhnsw
             if (nvecs < n_train) {
                 std::cout << "No enough train vector in file: " << path_learn << std::endl;
                 return -1;
-            } else {
-                nvecs = n_train;
             }
 
-            trainvecs.resize(nvecs * dim);
+            // get whold vector set from learn vector file
+            trainvecs.resize(n_train * dim);
             {
                  std::ifstream learn_input(path_learn, std::ios::binary);
                  learn_input.exceptions(~learn_input.goodbit);
-                 readXvecFvec<uint8_t>(learn_input, trainvecs.data(), dim, nvecs);
+                 readXvecFvec<uint8_t>(learn_input, trainvecs.data(), dim, n_train);
             }
             std::cout << "Get train vector count: " << nvecs << std::endl;
         } catch (...) {
@@ -1060,9 +1059,9 @@ namespace ivfhnsw
 
         try {
             // Set Random Subset of sub_nt trainvecs
-            std::cout << "Get random subset with vector numnber of: " << n_sub_train << std::endl;
+            std::cout << "Get random subset with vector number of: " << n_sub_train << std::endl;
             trainvecs_rnd_subset.resize(n_sub_train * dim);
-            random_subset(trainvecs.data(), trainvecs_rnd_subset.data(), dim, nvecs, n_sub_train);
+            random_subset(trainvecs.data(), trainvecs_rnd_subset.data(), dim, n_train, n_sub_train);
             std::cout << "Done with " << (stopw.getElapsedTimeMicro() / 1000000.0) << "s" << std::endl;
         } catch (...) {
             std::cout << "Failed to get random subset from train vector" << std::endl;
@@ -1072,7 +1071,7 @@ namespace ivfhnsw
         try {
             stopw.reset();
             std::cout << "Training PQ codebooks ..." << std::endl;
-            train_pq(nvecs, trainvecs_rnd_subset.data());
+            train_pq(n_sub_train, trainvecs_rnd_subset.data());
             std::cout << "Done with " << (stopw.getElapsedTimeMicro() / 1000000.0) << "s" << std::endl;
         } catch (...) {
             std::cout << "Failed to training PQ codebooks" << std::endl;

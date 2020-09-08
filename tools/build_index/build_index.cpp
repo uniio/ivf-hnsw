@@ -60,13 +60,6 @@ int main(int argc, char** argv) {
     //==========
     // Load PQ
     //==========
-    rc = index->load_pq_codebooks(sys_conf, pq_conf);
-    if (rc) {
-        std::cout << "Failed to load PQ CodeBooks" << std::endl;
-        goto out;
-    }
-    std::cout << "Success to load PQ CodeBooks" << std::endl;
-
     rc = db_p->GetLatestIndexInfo(ver, batch_start, batch_end);
     if (rc) {
         std::cout << "Failed to get vector batch info" << std::endl;

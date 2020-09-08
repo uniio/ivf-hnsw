@@ -1534,7 +1534,7 @@ out:
         // TODO: current code assume maximize batch index number is 1000
         // that's why we use 03lu here
         sprintf(path_precomputed_idx,
-                "%s/split_1000/precomputed_idxs_sift1b_%03lu.ivecs",
+                "%s/split_1000/precomputed_idxs_%03lu.ivecs",
                 sys_conf.path_base_data,
                 batch_idx);
     }

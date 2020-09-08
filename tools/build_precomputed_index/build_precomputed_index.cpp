@@ -58,8 +58,7 @@ int main(int argc, char **argv) {
     }
 
     // build precomputed index for all of batch in system
-    // TODO: in service1b the 2nd parameter should be batch number in active (ie. current used by service)
-    rc = index->build_precomputed_index(sys_conf, sys_conf.batch_max);
+    rc = index->build_precomputed_index(sys_conf);
     if (rc) {
         std::cout << "Failed to build precomputed index" << std::endl;
         exit(1);

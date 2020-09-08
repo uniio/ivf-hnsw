@@ -11,11 +11,12 @@
 #include <unistd.h>
 
 #include <faiss/index_io.h>
-#include <faiss/Heap.h>
-#include <faiss/ProductQuantizer.h>
+#include <faiss/utils/Heap.h>
+#include <faiss/impl/ProductQuantizer.h>
 #include <faiss/VectorTransform.h>
-#include <faiss/FaissAssert.h>
-#include <faiss/utils.h>
+#include <faiss/impl/FaissAssert.h>
+#include <faiss/utils/utils.h>
+#include <faiss/utils/distances.h>
 
 #include <hnswlib/hnswalg.h>
 #include "utils.h"
@@ -53,11 +54,11 @@ namespace ivfhnsw {
         size_t nc;              ///< Number of centroids
         size_t code_size;       ///< Code size per vector in bytes
 
-        hnswlib::HierarchicalNSW *quantizer; ///< Quantizer that maps vectors to inverted lists (HNSW [Y.Malkov])
+        hnswlib::HierarchicalNSW *quantizer = nullptr; ///< Quantizer that maps vectors to inverted lists (HNSW [Y.Malkov])
 
-        faiss::ProductQuantizer *pq;         ///< Produces the residual codes
-        faiss::ProductQuantizer *norm_pq;    ///< Produces the norm codes of reconstructed base vectors
-        faiss::LinearTransform *opq_matrix;  ///< Rotation matrix for OPQ encoding
+        faiss::ProductQuantizer *pq = nullptr;         ///< Produces the residual codes
+        faiss::ProductQuantizer *norm_pq = nullptr;    ///< Produces the norm codes of reconstructed base vectors
+        faiss::LinearTransform *opq_matrix = nullptr;  ///< Rotation matrix for OPQ encoding
         bool do_opq;                         ///< Turn on/off OPQ encoding
 
         size_t nprobe;        ///< Number of probes at search time

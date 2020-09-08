@@ -95,9 +95,8 @@ namespace ivfhnsw {
         // check if path_base_model directory in table system_orca is exist
         std::string path_conf = path_info;
         std::string dir_conf = path_conf.substr(0, path_conf.find_last_of('/')+1);
-        std::fstream output(dir_conf, std::ios::in);
-        if(!output) {
-            std::cout << "WARNING: configure file directory " << dir_conf << " is not exist, please check!" << std::endl;
+        if (!exists(dir_conf.c_str())) {
+            std::cout << "WARNING: configure file directory " << dir_conf << " does not exist, please check!" << std::endl;
             return -1;
         }
 

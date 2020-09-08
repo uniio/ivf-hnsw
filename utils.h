@@ -11,8 +11,9 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <unistd.h>
 
-#include <faiss/utils.h>
+#include <faiss/utils/utils.h>
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -151,9 +152,14 @@ namespace ivfhnsw {
     }
 
     /// Check if file exists
+    #if 0
     inline bool exists(const char *path) {
         std::ifstream f(path);
         return f.good();
+    }
+    #endif
+    inline bool exists(const char *path) {
+        return (access(path, F_OK) == 0);
     }
 
     inline bool exists_dir(const char *path) {

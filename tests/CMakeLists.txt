@@ -10,6 +10,8 @@ LINK_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../lib/)
 
 SET( CMAKE_CXX_FLAGS  "-O2 -g -lrt -DNDEBUG -std=c++11 -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0" )
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../bin/")
+
 foreach(source ${srcs})
     get_filename_component(name ${source} NAME_WE)
 

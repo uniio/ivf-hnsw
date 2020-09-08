@@ -1568,17 +1568,8 @@ out:
     {
         std::vector<size_t> b_list(0);
         auto sz = b_list.size();
-        for (size_t i = 0; i < sz; i++) {
-            if (batch_list[i].no_precomputed_idx) {
-                char path_vector[1024], path_precomputed_idx[1024];
-                // batch vector has no precomputed index, build it first
-                get_path_vector(sys_conf, batch_list[i].batch, path_vector);
-                get_path_precomputed_idx(sys_conf, batch_list[i].batch, path_vector);
-                std::cout << "Build precomputed index for vector of batch: " << batch_list[i].batch << std::endl;
-                int rc = build_precomputed_index(path_vector, path_precomputed_idx);
-            }
+        for (size_t i = 0; i < sz; i++)
             b_list.push_back(batch_list[i].batch);
-        }
 
         return build_batchs_to_index(sys_conf, b_list);
     }

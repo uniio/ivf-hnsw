@@ -18,13 +18,6 @@ else
     eval $RUN_SUDO ln -s ${PWD} /usr/include/ivf-hnsw
 fi
 
-if [ -L /usr/include/faiss ] ; then
-    eval $RUN_SUDO rm /usr/include/faiss
-    eval $RUN_SUDO ln -s ${PWD}/faiss/ /usr/include/faiss
-else
-    eval $RUN_SUDO ln -s ${PWD}/faiss/ /usr/include/faiss
-fi
-
 if [ -L /usr/include/hnswlib ] ; then
     eval $RUN_SUDO rm /usr/include/hnswlib
     eval $RUN_SUDO ln -s ${PWD}/hnswlib/ /usr/include/hnswlib
@@ -54,11 +47,6 @@ if [ "$(expr substr $(uname -s) 1 5)" = "Linux" ]; then
     fi
 
     # when the following lib files are ready, we think build ivf-hnsw done
-    if [ ! -f ${PWD}/lib/libfaiss.a ]; then
-        echo ivf-hnsw not build yet, build it and run this script again
-        exit 1
-    fi
-
     if [ ! -f ${PWD}/lib/libhnswlib.a ]; then
         echo ivf-hnsw not build yet, build it and run this script again
         exit 1
@@ -71,7 +59,6 @@ if [ "$(expr substr $(uname -s) 1 5)" = "Linux" ]; then
 
     # following is not related with run program, it's used for build program which will use ivf-hnsw
     # as if ldconfig not use symbol link, must copy files
-    eval $RUN_SUDO cp -f ${PWD}/lib/libfaiss.a /usr/local/lib/libfaiss.a
     eval $RUN_SUDO cp -f ${PWD}/lib/libhnswlib.a /usr/local/lib/libhnswlib.a
     eval $RUN_SUDO cp -f ${PWD}/lib/libivf-hnsw.a /usr/local/lib/libivf-hnsw.a
 

@@ -11,12 +11,16 @@ if [ "$(expr substr $(uname -s) 1 5)" != "Linux" ]; then
     unset RUN_SUDO
 fi
 
-eval $RUN_SUDO rm ${PWD}/faisslib/faiss
+if [ -f ${PWD}/faisslib/faiss ]; then
+    eval $RUN_SUDO rm ${PWD}/faisslib/faiss
+fi
 eval $RUN_SUDO ln -s ${PWD}/faisslib/faiss_987337 ${PWD}/faisslib/faiss
 
-if [ ! -f ${PWD}/faisslib/faiss/lib/libfaiss.a ]; then
-    echo libfaiss.a not exists, clone orcadt/faiss.git and build first !
-    exit 1
+if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    if [ ! -f ${PWD}/faisslib/faiss/lib/libfaiss.a ]; then
+        echo libfaiss.a dies not exist, project may broken !
+        exit 1
+    fi
 fi
 
 if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then

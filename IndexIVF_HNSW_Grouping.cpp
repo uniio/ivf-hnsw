@@ -1358,6 +1358,8 @@ out:
             std::cout << "Computing centroid dists" << std::endl;
             compute_inter_centroid_dists();
         }
+
+        return 0;
     }
 
     int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const system_conf_t &sys_conf, size_t batch_idx)
@@ -1671,12 +1673,6 @@ out:
         // return batch range to build index
         batch_start = batchs_to_index[0];
         batch_end = batchs_to_index[batchs_to_index.size() - 1];
-
-        // Computing centroid norms and inter-centroid distances
-        std::cout << "Computing centroid norms" << std::endl;
-        compute_centroid_norms();
-        std::cout << "Computing centroid dists" << std::endl;
-        compute_inter_centroid_dists();
 
     out:
         return rc;

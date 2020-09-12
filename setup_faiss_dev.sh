@@ -11,7 +11,7 @@ if [ "$(expr substr $(uname -s) 1 5)" != "Linux" ]; then
     unset RUN_SUDO
 fi
 
-if [ -f ${PWD}/faisslib/faiss ]; then
+if [ -L ${PWD}/faisslib/faiss ]; then
     eval $RUN_SUDO rm ${PWD}/faisslib/faiss
 fi
 eval $RUN_SUDO ln -s ${PWD}/faisslib/faiss_987337 ${PWD}/faisslib/faiss
@@ -29,6 +29,8 @@ if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     eval $RUN_SUDO ldconfig
 fi
 
-eval $RUN_SUDO rm -r /usr/include/faiss
+if [ -L /usr/include/faiss ]; then
+    eval $RUN_SUDO rm -r /usr/include/faiss
+fi
 eval $RUN_SUDO ln -s ${PWD}/faisslib/faiss/header /usr/include/faiss
 echo "setup_faiss_dev success"

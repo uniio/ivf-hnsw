@@ -1,7 +1,7 @@
 #!/bin/bash
 if [ "$(expr substr $(uname -s) 1 5)" != "Linux" ]; then
     # path in msys2 is not same as Linux
-	# create directory and symbol link only to fix CDT error in eclipse
+    # create directory and symbol link only to fix CDT error in eclipse
     if [ ! -d /usr/include/postgresql ]; then
 	    mkdir /usr/include/postgresql
     fi

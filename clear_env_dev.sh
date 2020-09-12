@@ -37,4 +37,8 @@ if [ -L ${PWD}/hnswalg.h ] ; then
     eval $RUN_SUDO rm ${PWD}/hnswalg.h
 fi
 
+if [ -L ${PWD}/faisslib/faiss ] ; then
+    eval $RUN_SUDO rm ${PWD}/faisslib/faiss
+fi
+
 echo "success clear develop environment"

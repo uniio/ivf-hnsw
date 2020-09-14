@@ -1144,8 +1144,10 @@ out:
         get_path_pq(sys_conf, pq_conf.ver, path_full);
         std::cout << "Loading Residual PQ codebook from " << path_full << std::endl;
         try {
-            if (pq)
+            if (pq) {
                 delete pq;
+		pq = nullptr;
+            }
             pq = faiss::read_ProductQuantizer(path_full);
             std::cout << "Finish Load Residual PQ codebook: " << path_full << std::endl;
         } catch (...) {
@@ -1171,8 +1173,10 @@ out:
         get_path_norm_pq(sys_conf, pq_conf.ver, path_full);
         std::cout << "Loading Norm PQ codebook from " << path_full << std::endl;
         try {
-            if (norm_pq)
+            if (norm_pq) {
                 delete norm_pq;
+		norm_pq = nullptr;
+            }
             norm_pq = faiss::read_ProductQuantizer(path_full);
             std::cout << "Finsh Load Norm PQ codebook: " << path_full << std::endl;
         } catch (...) {

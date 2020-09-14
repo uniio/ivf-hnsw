@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
         std::cout << "Failed to load quantizer" << std::endl;
         goto out;
     }
+
     rc = index->load_pq_codebooks(sys_conf, pq_conf);
     if (rc) {
         std::cout << "Failed to load PQ codebooks" << std::endl;

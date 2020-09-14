@@ -71,6 +71,8 @@ struct ProductQuantizer {
 
     ProductQuantizer ();
 
+    ~ProductQuantizer ();
+
     /// compute derived values when d, M and nbits have been set
     void set_derived_values ();
 

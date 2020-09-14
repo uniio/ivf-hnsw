@@ -98,23 +98,30 @@ namespace ivfhnsw {
     // vector id, and store result in data
     void readBaseVec(const char *path_base, const size_t dim, const size_t vec_id, float *data) {
         auto vec_off = vec_id * (sizeof(uint32_t) + dim);
-
-        std::ifstream fs_input(path_base, std::ios::binary);
-        fs_input.exceptions(~fs_input.goodbit);
-        fs_input.seekg(vec_off, fs_input.beg);
-        readXvecFvec<uint8_t>(fs_input, data, dim, 1);
-        fs_input.close();
+        try {
+            std::ifstream fs_input(path_base, std::ios::binary);
+            fs_input.exceptions(~fs_input.goodbit);
+            fs_input.seekg(vec_off, fs_input.beg);
+            readXvecFvec<uint8_t>(fs_input, data, dim, 1);
+            fs_input.close();
+        } catch (...) {
+            std::cout << "readBaseVec : iostream error!" << std::endl;
+        }
     }
 
     // read centroid vector from centroid file by centroid index
     void readCentroidVec(const char *path_centroid, const size_t dim, const long centroid_idx, float *data) {
         auto centroid_off = centroid_idx * (sizeof(uint32_t) + dim * sizeof(float));
 
-        std::ifstream fs_input(path_centroid, std::ios::binary);
-        fs_input.exceptions(~fs_input.goodbit);
-        fs_input.seekg(centroid_off, fs_input.beg);
-        readXvec<float>(fs_input, data, dim);
-        fs_input.close();
+        try {
+            std::ifstream fs_input(path_centroid, std::ios::binary);
+            fs_input.exceptions(~fs_input.goodbit);
+            fs_input.seekg(centroid_off, fs_input.beg);
+            readXvec<float>(fs_input, data, dim);
+            fs_input.close();
+        } catch (...) {
+            std::cout << "readCentroidVec : iostream error!" << std::endl;
+        }
     }
 
     // calculate distance between query vector and vector in base vector file indicated by vector id

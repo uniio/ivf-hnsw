@@ -1234,6 +1234,7 @@ out:
             std::cout << "Failed to build precomputing index for batch: " << batch_idx << std::endl;
             return rc;
         }
+
         rc = db_p->ActivePrecomputedIndex(batch_idx);
         if (rc) {
             std::cout << "Failed to active precomputing index for batch: " << batch_idx << std::endl;
@@ -1277,11 +1278,19 @@ out:
         if (rc) return rc;
 
         StopW stopw = StopW();
+        std::ifstream input;
 
-        std::ifstream input(path_base, std::ios::binary);
         input.exceptions(~input.goodbit);
-        std::ofstream output(path_prcomputed_index, std::ios::binary | std::ios::trunc);
+        std::ofstream output;
         output.exceptions(~output.goodbit);
+        try {
+            input.open(path_base, std::ios::binary);
+            output.open(path_prcomputed_index, std::ios::binary | std::ios::trunc);
+        } catch (...) {
+            rc = -1;
+            std::cout << "build_precomputed_index : iostream error!" << std::endl;
+            return rc;
+        }
 
         if (!input.is_open()) {
             std::cout << "Failed to open base vector file: " << path_base << std::endl;
@@ -1443,10 +1452,20 @@ out:
 
             // Iterate through the dataset extracting points from groups,
             // whose ids lie in [ngroups_added, ngroups_added + groups_per_iter)
-            std::ifstream base_input(path_vector, std::ios::binary);
+
+            std::ifstream base_input;
+            std::ifstream idx_input;
             base_input.exceptions(~base_input.goodbit);
-            std::ifstream idx_input(path_precomputed_idx, std::ios::binary);
             idx_input.exceptions(~idx_input.goodbit);
+
+            try {
+                base_input.open(path_vector, std::ios::binary);
+                idx_input.open(path_precomputed_idx, std::ios::binary);
+            } catch (...) {
+                rc = -1;
+                std::cout << "add_one_batch_to_index : iostream error!" << std::endl;
+                return rc;
+            }
 
             for (size_t b = 0; b < nbatches; b++) {
                 // get correct batch_size value, because

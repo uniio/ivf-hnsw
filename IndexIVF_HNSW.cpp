@@ -361,10 +361,16 @@ namespace ivfhnsw {
         char *miss_log = "centroids_miss.log";
         std::ofstream log_trace;
         log_trace.exceptions(~log_trace.goodbit);
-        if (missed)
-            log_trace.open(miss_log, std::ofstream::out | std::ofstream::app);
-        else
-            log_trace.open(hit_log, std::ofstream::out | std::ofstream::app);
+
+        try {
+            if (missed)
+                log_trace.open(miss_log, std::ofstream::out | std::ofstream::app);
+            else
+                log_trace.open(hit_log, std::ofstream::out | std::ofstream::app);
+        } catch (...) {
+            std::cout << "Failed to open log file for centroids traceing" << std::endl;
+            return;
+        }
 
         if (!log_trace.is_open()) {
             std::cout << "Failed to open log file for centroids traceing" << std::endl;

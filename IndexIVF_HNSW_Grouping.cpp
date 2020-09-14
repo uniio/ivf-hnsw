@@ -1146,7 +1146,7 @@ out:
         try {
             if (pq) {
                 delete pq;
-		pq = nullptr;
+                pq = nullptr;
             }
             pq = faiss::read_ProductQuantizer(path_full);
             std::cout << "Finish Load Residual PQ codebook: " << path_full << std::endl;
@@ -1154,7 +1154,6 @@ out:
             std::cout << "Failed to Load Residual PQ codebook: " << path_full << std::endl;
             return -1;
         }
-
 
         if (pq_conf.with_opq) {
             // get OPQ rotation matrix path

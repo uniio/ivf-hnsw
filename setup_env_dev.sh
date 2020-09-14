@@ -34,14 +34,14 @@ fi
 
 if [ -L ${PWD}/hnswalg.h ] ; then
     eval $RUN_SUDO rm ${PWD}/hnswalg.h
-    ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
+    eval $RUN_SUDO ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
 else
-    ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
+    eval $RUN_SUDO ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
 fi
 
 if [ "$(expr substr $(uname -s) 1 5)" = "Linux" ]; then
     # make sure libpq-dev package installed, otherwise it will lead build failed
-    dpkg -s libpq-dev
+    eval $RUN_SUDO dpkg -s libpq-dev
     if [  $? -ne 0 ];then
         echo "libpq-dev not installed, please install it before build"
     fi

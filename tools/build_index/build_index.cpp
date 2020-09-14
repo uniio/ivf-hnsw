@@ -104,8 +104,8 @@ int main(int argc, char** argv) {
     std::cout << "Success add rebuild index info to database" << std::endl;
 
 out:
-    if (db_p == nullptr) delete db_p;
-    if (index == nullptr) delete index;
+    if (db_p != nullptr) delete db_p;
+    if (index != nullptr) delete index;
 
     return rc;
 }

@@ -94,4 +94,8 @@ INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(2,
 INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(3, 0, current_timestamp, TRUE, TRUE);
 INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(4, 0, current_timestamp, TRUE, TRUE);
 INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(5, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(6, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(7, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(8, 0, current_timestamp, TRUE, TRUE);
+INSERT INTO batch_info(batch, start_id, ts, valid, no_precomputed_idx) VALUES(9, 0, current_timestamp, TRUE, TRUE);
 */

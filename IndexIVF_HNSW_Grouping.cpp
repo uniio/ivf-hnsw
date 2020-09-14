@@ -1147,7 +1147,7 @@ out:
             if (pq) {
                 delete pq;
                 pq = nullptr;
-	    }
+            }
             pq = faiss::read_ProductQuantizer(path_full);
             std::cout << "Finish Load Residual PQ codebook: " << path_full << std::endl;
         } catch (...) {

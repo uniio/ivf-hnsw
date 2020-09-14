@@ -1,7 +1,7 @@
 CC = g++
 CFLAGS = -ggdb3 -Wall -std=c++11
 SET_OBJ_DIR = -o
-LIBS = ../../lib/libivf-hnsw.a ../../lib/libfaiss.a ../../lib/libhnswlib.a -fopenmp -lopenblas -lpq -lopenblas
+LIBS = ../../lib/libivf-hnsw.a ../../lib/libhnswlib.a -lfaiss -fopenmp -lopenblas -lpq
 
 all : build_precomputed_index
 

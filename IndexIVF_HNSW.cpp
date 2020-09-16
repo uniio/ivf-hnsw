@@ -100,11 +100,17 @@ namespace ivfhnsw {
             return -1;
         }
 
-        if (exists(path_info) && exists(path_edges)) {
-            quantizer = new hnswlib::HierarchicalNSW(path_info, path_data, path_edges);
-            quantizer->efSearch = efConstruction;
-            return 0;
+        try {
+            if (exists(path_info) && exists(path_edges)) {
+                quantizer = new hnswlib::HierarchicalNSW(path_info, path_data, path_edges);
+                quantizer->efSearch = efConstruction;
+                return 0;
+            }
+        } catch (...) {
+            std::cout << "ERROR: failed to load quantizer file" << std::endl;
+            return -1;
         }
+
         quantizer = new hnswlib::HierarchicalNSW(d, nc, M, 2 * M, efConstruction);
 
         std::cout << "Constructing quantizer\n";

@@ -1663,6 +1663,7 @@ out:
         }
         if (batch_list.empty()) {
             std::cout << "No batch exists, cannot build index" << std::endl;
+            rc = -1;
             goto out;
         }
         for (std::vector<batch_info_t>::iterator it = batch_list.begin(); it != batch_list.end(); ++it) {
@@ -1674,6 +1675,7 @@ out:
 
         if (batchs_to_index.empty()) {
             std::cout << "No batch can build index, either batch is invalid or precomputed index not build yet" << std::endl;
+            rc = -1;
             goto out;
         }
 

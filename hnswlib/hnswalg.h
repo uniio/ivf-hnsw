@@ -50,14 +50,14 @@ namespace hnswlib {
         size_t cur_element_count;
         size_t efConstruction_;
 
-        VisitedListPool *visitedlistpool;
+        VisitedListPool *visitedlistpool = nullptr;
 
         std::mutex cur_element_count_guard_;
         idx_t enterpoint_node;
 
         size_t dist_calc;
 
-        char *data_level0_memory_;
+        char *data_level0_memory_ = nullptr;
 
         size_t d_;
         size_t data_size_;

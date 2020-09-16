@@ -86,25 +86,30 @@ namespace ivfhnsw {
      * Construction time is still acceptable: ~5 minutes for 1 million 96-d vectors
      * on Intel Xeon E5-2650 V2 2.60GHz.
      */
-    int IndexIVF_HNSW::build_quantizer(const char *path_data, const char *path_info,
-                                        const char *path_edges, size_t M,
-                                        size_t efConstruction)
+    int IndexIVF_HNSW::build_quantizer(const char* path_data, const char* path_info,
+                                       const char* path_edges, size_t M,
+                                       size_t efConstruction)
     {
         hdr_idx.efConstruction = efConstruction;
 
         // check if path_base_model directory in table system_orca is exist
         std::string path_conf = path_info;
-        std::string dir_conf = path_conf.substr(0, path_conf.find_last_of('/')+1);
+        std::string dir_conf = path_conf.substr(0, path_conf.find_last_of('/') + 1);
         std::fstream output(dir_conf, std::ios::in);
-        if(!output) {
+        if (!output) {
             std::cout << "WARNING: configure file directory " << dir_conf << " is not exist, please check!" << std::endl;
             return -1;
         }
 
-        if (exists(path_info) && exists(path_edges)) {
-            quantizer = new hnswlib::HierarchicalNSW(path_info, path_data, path_edges);
-            quantizer->efSearch = efConstruction;
-            return 0;
+        try {
+            if (exists(path_info) && exists(path_edges)) {
+                quantizer           = new hnswlib::HierarchicalNSW(path_info, path_data, path_edges);
+                quantizer->efSearch = efConstruction;
+                return 0;
+            }
+        } catch (...) {
+            std::cout << "ERROR: failed to load quantizer file" << std::endl;
+            return -1;
         }
         quantizer = new hnswlib::HierarchicalNSW(d, nc, M, 2 * M, efConstruction);
 
@@ -124,7 +129,6 @@ namespace ivfhnsw {
         quantizer->SaveEdges(path_edges);
         return 0;
     }
-
 
     void IndexIVF_HNSW::assign(size_t n, const float *x, idx_t *labels, size_t k) {
 #pragma omp parallel for

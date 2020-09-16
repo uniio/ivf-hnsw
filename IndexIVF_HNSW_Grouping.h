@@ -160,12 +160,11 @@ namespace ivfhnsw {
          * build precomputed index for batch, which has no precomputed index
          *
          * @param  sys_conf      system_orca table configure
-         * @param  skip_batch    don't process given batch
          *
          * skip_batch used to skip given batch, that is batch which service1b current used
          *
          */
-        int build_precomputed_index(system_conf_t &sys_conf, size_t skip_batch);
+        int build_precomputed_index(system_conf_t &sys_conf);
 
         int build_one_precomputed_index(system_conf_t &sys_conf, size_t batch_idx);
 

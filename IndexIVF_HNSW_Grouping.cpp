@@ -1246,19 +1246,16 @@ out:
         return 0;
     }
 
-    int IndexIVF_HNSW_Grouping::build_precomputed_index(system_conf_t &sys_conf, size_t skip_batch)
+    int IndexIVF_HNSW_Grouping::build_precomputed_index(system_conf_t &sys_conf)
     {
         std::vector<batch_info_t> batch_list;
-        char path_vector[1024], path_precomputed_idx[1024];
-        int rc;
+        char  path_vector[1024], path_precomputed_idx[1024];
+        int   rc;
 
         rc = db_p->GetBatchList(batch_list);
         size_t sz = batch_list.size();
         for (auto i = 0; i < sz; i++) {
             auto a_batch = batch_list[i];
-
-            if (a_batch.batch == skip_batch)
-                continue;
 
             if (a_batch.valid == false || a_batch.no_precomputed_idx == false)
                 continue;

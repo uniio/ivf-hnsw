@@ -40,8 +40,10 @@ namespace hnswlib {
 
 HierarchicalNSW::~HierarchicalNSW()
 {
-    free(data_level0_memory_);
-    delete visitedlistpool;
+    if (data_level0_memory_)
+        free(data_level0_memory_);
+    if (visitedlistpool)
+        delete visitedlistpool;
 }
 
 

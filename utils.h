@@ -92,7 +92,24 @@ namespace ivfhnsw {
         for (size_t i = 0; i < n; i++) {
             in.read((char *) &dim, sizeof(uint32_t));
             if (dim != d) {
-                std::cout << "file error\n";
+                std::cout << __FILE__ << ":" << __LINE__ << " file error" << std::endl;
+                exit(1);
+            }
+            in.read((char *) (data + i * dim), dim * sizeof(T));
+        }
+    }
+
+    /// Read fvec/ivec/bvec format vectors
+    template<typename T>
+    void readXvec_ex(std::ifstream &in, T *data, const size_t d, const size_t n = 1)
+    {
+        uint32_t vid;
+        uint32_t dim = d;
+        for (size_t i = 0; i < n; i++) {
+            in.read((char *) &vid, sizeof(vid));
+            in.read((char *) &dim, sizeof(dim));
+            if (dim != d) {
+                std::cout << __FILE__ << ":" << __LINE__ << " file error" << std::endl;
                 exit(1);
             }
             in.read((char *) (data + i * dim), dim * sizeof(T));
@@ -120,7 +137,7 @@ namespace ivfhnsw {
         for (size_t i = 0; i < n; i++) {
             in.read((char *) &dim, sizeof(uint32_t));
             if (dim != d) {
-                std::cout << "file error\n";
+                std::cout << __FILE__ << ":" << __LINE__ << " file error" << std::endl;
                 exit(1);
             }
             in.read((char *) mass, dim * sizeof(T));
@@ -131,7 +148,7 @@ namespace ivfhnsw {
 
     /// Read fvec/ivec/bvec format vectors and convert them to the float array
     template<typename T>
-    void readXvecFvecEx(std::ifstream &in, float *data, const size_t d, const size_t n = 1)
+    void readXvecFvec_ex(std::ifstream &in, float *data, const size_t d, const size_t n = 1)
     {
         uint32_t vid;
         uint32_t dim = d;
@@ -142,7 +159,7 @@ namespace ivfhnsw {
             in.read((char *) &vid, sizeof(uint32_t));
             in.read((char *) &dim, sizeof(uint32_t));
             if (dim != d) {
-                std::cout << "file error\n";
+                std::cout << __FILE__ << ":" << __LINE__ << " file error" << std::endl;
                 exit(1);
             }
             in.read((char *) mass, dim * sizeof(T));
@@ -203,6 +220,7 @@ namespace ivfhnsw {
     void get_index_name(const char *path_idx, size_t idx, char *idx_name);
     int mkdir_p(const char *dir, const mode_t mode);
     int get_vec_attr(const char *path_vec, uint32_t &dim, size_t &nvecs);
+    int get_vec_attr_ex(const char *path_vec, uint32_t &dim, size_t &nvecs);
 
     /// clone file_src in new file named file_dst
     int copy_file(const char *file_src, const char *file_dst);

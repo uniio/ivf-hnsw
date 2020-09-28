@@ -1354,6 +1354,135 @@ out:
         return rc;
     }
 
+    int IndexIVF_HNSW_Grouping::build_one_precomputed_index_ex(system_conf_t &sys_conf, size_t batch_idx)
+    {
+        char path_vector[1024], path_precomputed_idx[1024];
+        int rc;
+
+        get_path_vector(sys_conf, batch_idx, path_vector);
+        get_path_precomputed_idx(sys_conf, batch_idx, path_precomputed_idx);
+        std::cout << "Build precomputed index for vector: " << path_vector << std::endl;
+        rc = build_precomputed_index_ex(path_vector, path_precomputed_idx);
+        if (rc) {
+            std::cout << "Failed to build precomputing index for batch: " << batch_idx << std::endl;
+            return rc;
+        }
+
+        rc = db_p->ActivePrecomputedIndex(batch_idx);
+        if (rc) {
+            std::cout << "Failed to active precomputing index for batch: " << batch_idx << std::endl;
+            return rc;
+        }
+
+        return 0;
+    }
+
+    int IndexIVF_HNSW_Grouping::build_precomputed_index_ex(system_conf_t &sys_conf)
+    {
+        std::vector<batch_info_t> batch_list;
+        char path_vector[1024], path_precomputed_idx[1024];
+        int rc;
+
+        rc = db_p->GetBatchList(batch_list);
+        size_t sz = batch_list.size();
+        for (auto i = 0; i < sz; i++) {
+            auto a_batch = batch_list[i];
+
+            if (a_batch.valid == false || a_batch.no_precomputed_idx == false)
+                continue;
+
+            rc = build_one_precomputed_index_ex(sys_conf, a_batch.batch);
+            if (rc) {
+                std::cout << "Failed to build precomputing index for batch: " << a_batch.batch << std::endl;
+                return rc;
+            }
+        }
+
+        return 0;
+    }
+
+    int IndexIVF_HNSW_Grouping::build_precomputed_index_ex(const char *path_base, const char *path_prcomputed_index)
+    {
+        uint32_t dim;
+        size_t nvecs;
+        int rc;
+
+        rc = get_vec_attr(path_base, dim, nvecs);
+        if (rc) return rc;
+
+        StopW stopw = StopW();
+        std::ifstream input;
+
+        input.exceptions(~input.goodbit);
+        std::ofstream output;
+        output.exceptions(~output.goodbit);
+        try {
+            input.open(path_base, std::ios::binary);
+            output.open(path_prcomputed_index, std::ios::binary | std::ios::trunc);
+        } catch (...) {
+            rc = -1;
+            std::cout << "build_precomputed_index : iostream error!" << std::endl;
+            return rc;
+        }
+
+        if (!input.is_open()) {
+            std::cout << "Failed to open base vector file: " << path_base << std::endl;
+            return -1;
+        }
+
+        if (!output.is_open()) {
+            std::cout << "Failed to open prcomputed_index file: " << path_prcomputed_index << std::endl;
+            return -1;
+        }
+
+        const uint32_t batch_size_max = 1000000;
+        uint32_t batch_size = batch_size_max;
+        if (nvecs < batch_size_max) batch_size = nvecs;
+
+        const size_t nbatches = nvecs / batch_size;
+
+        /*
+         * get correct batch size, we cannot ensure vector number in
+         * file always multiple of batch_size_max as in test code
+         */
+        std::vector<size_t> batch_size_list(nbatches);
+        for (size_t i = 0; i < nbatches; i++) {
+            if (i != (nbatches - 1)) {
+                batch_size_list[i] = batch_size;
+            } else {
+                batch_size_list[i] = nvecs - i*batch_size;
+            }
+        }
+
+        std::vector<float> batch(batch_size_max * dim);
+        std::vector<idx_t> precomputed_idx(batch_size_max);
+
+        // TODO: if we should let efSearch as a function parameter ?
+        quantizer->efSearch = 220;
+        for (size_t i = 0; i < nbatches; i++) {
+            // get current batch size
+            batch_size = batch_size_list[i];
+
+            if (i % 10 == 0) {
+                std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                          << (100.*i) / nbatches << "%" << std::endl;
+            }
+
+            try {
+                readXvecFvec_ex<uint8_t>(input, batch.data(), dim, batch_size);
+                assign(batch_size, batch.data(), precomputed_idx.data());
+
+                output.write((char *) &batch_size, sizeof(uint32_t));
+                output.write((char *) precomputed_idx.data(), batch_size * sizeof(idx_t));
+            } catch (...) {
+                rc = -1;
+                break;
+            }
+        }
+
+        return rc;
+    }
+
     int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const system_conf_t &sys_conf, size_t batch_idx, bool final_add)
     {
         int rc;
@@ -1476,6 +1605,173 @@ out:
                 batch_size = batch_size_list[b];
 
                 readXvec<uint8_t>(base_input, batch.data(), d, batch_size);
+                readXvec<idx_t>(idx_input, idx_batch.data(), batch_size, 1);
+
+                for (size_t i = 0; i < batch_size; i++) {
+                    if (idx_batch[i] < ngroups_added ||
+                        idx_batch[i] >= ngroups_added + groups_per_iter)
+                        continue;
+
+                    idx_t idx = idx_batch[i] % groups_per_iter;
+                    for (size_t j = 0; j < d; j++)
+                        data[idx].push_back(batch[i * d + j]);
+                    ids[idx].push_back(b * batch_size + i);
+                }
+            }
+
+            /*
+             * If <opt.nc> is not a multiple of groups_per_iter,
+             * change <groups_per_iter> on the last iteration
+             */
+            if (nc - ngroups_added <= groups_per_iter)
+                groups_per_iter = nc - ngroups_added;
+
+            size_t j = 0;
+            #pragma omp parallel for
+            for (size_t i = 0; i < groups_per_iter; i++) {
+                #pragma omp critical
+                {
+                    if (j % 10000 == 0) {
+                        std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                                  << (100. * (ngroups_added + j)) / nc << "%" << std::endl;
+                    }
+                    j++;
+                }
+                const size_t group_size = ids[i].size();
+                std::vector<float> group_data(group_size * d);
+                // Convert bytes to floats
+                for (size_t k = 0; k < group_size * d; k++)
+                    group_data[k] = 1. *data[i][k];
+
+                add_group(ngroups_added + i, group_size, group_data.data(), ids[i].data());
+            }
+        }
+
+        return 0;
+    }
+
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index_ex(const system_conf_t &sys_conf, size_t batch_idx, bool final_add)
+    {
+        int rc;
+
+        rc = add_one_batch_to_index_ex(sys_conf, batch_idx);
+        if (rc) {
+            std::cout << "Failed to add batch vector: " << batch_idx << std::endl;
+            return rc;
+        }
+
+        if (final_add) {
+            // Computing centroid norms and inter-centroid distances
+            std::cout << "Computing centroid norms" << std::endl;
+            compute_centroid_norms();
+            std::cout << "Computing centroid dists" << std::endl;
+            compute_inter_centroid_dists();
+        }
+
+        return 0;
+    }
+
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index_ex(const system_conf_t &sys_conf, size_t batch_idx)
+    {
+        int rc;
+        char path_vector[1024];
+        char path_precomputed_idx[1024];
+
+        // get vector file path and precomputed index file path
+        // TODO: notice 03lu, because we use 1000 vector, format should be 001 002
+        sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs", sys_conf.path_base_data, batch_idx);
+        sprintf(path_precomputed_idx, "%s/split_1000/precomputed_idxs_%03lu.ivecs", sys_conf.path_base_data, batch_idx);
+
+        return add_one_batch_to_index_ex(path_vector, path_precomputed_idx);
+    }
+
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index_ex(const char *path_vector,
+                                                       const char *path_precomputed_idx)
+    {
+        const size_t batch_size_max = 1000000;
+        size_t groups_per_iter = 250000;
+        std::vector<uint8_t> batch(batch_size_max * d);
+        std::vector<idx_t> idx_batch(batch_size_max);
+        uint32_t batch_size, dim;
+        size_t nbatches, nvecs;
+        int rc;
+
+        // get vector number in the batch of vector file
+        rc = get_vec_attr_ex(path_vector, dim, nvecs);
+        if (rc) {
+            std::cout << "Failed to access vector file: " << path_vector << std::endl;
+            return rc;
+        }
+
+        std::cout << "Build index for file: " << path_vector << " " << path_precomputed_idx << std::endl;
+        StopW stopw = StopW();
+
+        batch_size = batch_size_max;
+        if (nvecs < batch_size_max)
+            batch_size = nvecs;
+
+        // calculate correct batch count
+        nbatches = nvecs / batch_size;
+        if (nvecs > nbatches * batch_size) {
+            nbatches++;
+        }
+
+        // fix behavior when total vector record number in file smaller than groups_per_iter
+        if (nvecs < groups_per_iter)
+            groups_per_iter = nvecs;
+
+        std::cout << "Batch file " << path_vector << " with vector number of " << nvecs << std::endl;
+        std::cout << "Build index with batch size " << batch_size << std::endl;
+        std::cout << "Build index with batch count " << nbatches << std::endl;
+        std::cout << "Build index in one iteration with groups count " << groups_per_iter << std::endl;
+
+        /*
+         * not all batch have same vector number
+         * although we try to let every batch file has same vector number
+         * but, when server crash, we will start with a new batch
+         * which will lead previous last batch not have enough vector data
+         * following code used to get correct batch size
+         *
+         */
+        std::vector<size_t> batch_size_list(nbatches);
+        for (size_t i = 0; i < nbatches; i++) {
+            if (i != (nbatches - 1)) {
+                batch_size_list[i] = batch_size;
+            } else {
+                batch_size_list[i] = nvecs - i*batch_size;
+            }
+        }
+
+        for (size_t ngroups_added = 0; ngroups_added < nc; ngroups_added += groups_per_iter)
+        {
+            std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                      << ngroups_added << " / " << nc << std::endl;
+
+            std::vector<std::vector<uint8_t>> data(groups_per_iter);
+            std::vector<std::vector<idx_t>> ids(groups_per_iter);
+
+            // Iterate through the dataset extracting points from groups,
+            // whose ids lie in [ngroups_added, ngroups_added + groups_per_iter)
+
+            std::ifstream base_input;
+            std::ifstream idx_input;
+            base_input.exceptions(~base_input.goodbit);
+            idx_input.exceptions(~idx_input.goodbit);
+
+            try {
+                base_input.open(path_vector, std::ios::binary);
+                idx_input.open(path_precomputed_idx, std::ios::binary);
+            } catch (...) {
+                rc = -1;
+                std::cout << "add_one_batch_to_index : iostream error!" << std::endl;
+                return rc;
+            }
+
+            for (size_t b = 0; b < nbatches; b++) {
+                // get correct batch_size value, because
+                batch_size = batch_size_list[b];
+
+                readXvec_ex<uint8_t>(base_input, batch.data(), d, batch_size);
                 readXvec<idx_t>(idx_input, idx_batch.data(), batch_size, 1);
 
                 for (size_t i = 0; i < batch_size; i++) {

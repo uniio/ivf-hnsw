@@ -167,6 +167,11 @@ namespace ivfhnsw {
 
         int build_one_precomputed_index(system_conf_t &sys_conf, size_t batch_idx);
 
+        int build_precomputed_index_ex(const char* path_base, const char* path_prcomputed_index);
+
+        int build_precomputed_index_ex(system_conf_t& sys_conf);
+
+        int build_one_precomputed_index_ex(system_conf_t& sys_conf, size_t batch_idx);
 
         /*
          * Build Index file with given batchs of data
@@ -208,6 +213,14 @@ namespace ivfhnsw {
          */
         int build_batchs_to_index(const system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list);
         int add_one_batch_to_index(const system_conf_t &sys_conf, size_t batch_idx, bool final_add);
+
+        int build_batchs_to_index_ex(const system_conf_t& sys_conf, const size_t batch_begin, const size_t batch_end);
+        int build_batchs_to_index_ex(const system_conf_t& sys_conf, std::vector<size_t>& batch_list);
+        int build_batchs_to_index_ex(const system_conf_t& sys_conf, std::vector<batch_info_t>& batch_list);
+        int add_one_batch_to_index_ex(const system_conf_t& sys_conf, size_t batch_idx, bool final_add);
+        int add_one_batch_to_index_ex(const char *path_vector, const char *path_precomputed_idx);
+        int add_one_batch_to_index_ex(const system_conf_t &sys_conf, size_t batch_idx);
+
         void get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
         int save_index(const system_conf_t &sys_conf, const size_t idx_ver);
 

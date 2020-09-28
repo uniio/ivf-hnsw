@@ -357,16 +357,47 @@ namespace ivfhnsw {
         fs_input.exceptions(~fs_input.goodbit);
         try {
             fs_input.open(path_vec, std::ios::binary);
-            fs_input.read((char *) &dim, sizeof(uint32_t));
+            fs_input.read((char *) &dim, sizeof(dim));
         } catch (...) {
             rc = -1;
             std::cout << "Error to read: " << path_vec << std::endl;
         }
-        fs_input.close();
+        if (fs_input.is_open())
+            fs_input.close();
 
         // TODO: this code assume every vector a byte based
         if (!rc) {
-            nvecs = st.st_size / (sizeof(uint32_t) + dim * sizeof(uint8_t));
+            nvecs = st.st_size / (sizeof(dim) + dim * sizeof(uint8_t));
+        }
+        return rc;
+    }
+
+    int get_vec_attr_ex(const char *path_vec, uint32_t &dim, size_t &nvecs)
+    {
+        struct stat st;
+        int rc = stat(path_vec, &st);
+        if (rc) {
+            std::cout << "Failed to access file: " << path_vec << std::endl;
+            return rc;
+        }
+
+        std::ifstream fs_input;
+        uint32_t vec_id;
+        fs_input.exceptions(~fs_input.goodbit);
+        try {
+            fs_input.open(path_vec, std::ios::binary);
+            fs_input.read((char *) &vec_id, sizeof(vec_id));
+            fs_input.read((char *) &dim, sizeof(dim));
+        } catch (...) {
+            rc = -1;
+            std::cout << "Error to read: " << path_vec << std::endl;
+        }
+        if (fs_input.is_open())
+            fs_input.close();
+
+        // TODO: this code assume every vector a byte based
+        if (!rc) {
+            nvecs = st.st_size / (sizeof(dim) + dim * sizeof(uint8_t));
         }
         return rc;
     }

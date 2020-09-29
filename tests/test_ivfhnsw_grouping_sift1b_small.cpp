@@ -47,7 +47,10 @@ int main(int argc, char **argv) {
     // Initialize Index 
     //==================
     IndexIVF_HNSW_Grouping *index = new IndexIVF_HNSW_Grouping(opt.d, opt.nc, opt.code_size, 8, opt.nsubc);
-    index->build_quantizer(opt.path_centroids, opt.path_info, opt.path_edges, opt.M, opt.efConstruction);
+    if (index->build_quantizer(opt.path_centroids, opt.path_info, opt.path_edges, opt.M, opt.efConstruction))
+    {
+        exit(-1);
+    }
     index->do_opq = opt.do_opq;
 
     //==========

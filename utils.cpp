@@ -397,7 +397,7 @@ namespace ivfhnsw {
 
         // TODO: this code assume every vector a byte based
         if (!rc) {
-            nvecs = st.st_size / (sizeof(dim) + dim * sizeof(uint8_t));
+            nvecs = st.st_size / (sizeof(uint32_t) + sizeof(dim) + dim * sizeof(uint8_t));
         }
         return rc;
     }

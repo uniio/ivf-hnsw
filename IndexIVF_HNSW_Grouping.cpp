@@ -1407,7 +1407,7 @@ out:
         size_t nvecs;
         int rc;
 
-        rc = get_vec_attr(path_base, dim, nvecs);
+        rc = get_vec_attr_ex(path_base, dim, nvecs);
         if (rc) return rc;
 
         StopW stopw = StopW();

@@ -1895,12 +1895,21 @@ out:
         return build_batchs_to_index(sys_conf, b_list);
     }
 
+    int IndexIVF_HNSW_Grouping::build_batchs_to_index_ex(const system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list)
+    {
+        std::vector<size_t> b_list(0);
+        auto sz = b_list.size();
+        for (size_t i = 0; i < sz; i++)
+            b_list.push_back(batch_list[i].batch);
+
+        return build_batchs_to_index_ex(sys_conf, b_list);
+    }
+
     int IndexIVF_HNSW_Grouping::build_batchs_to_index(const system_conf_t &sys_conf, std::vector<size_t> &batch_list)
     {
         char path_vector[1024];
         char path_precomputed_idx[1024];
         int  rc;
-
         auto sz = batch_list.size();
         for (size_t i = 0; i < sz; i++) {
             if (i == sz - 1)
@@ -1916,6 +1925,26 @@ out:
         return 0;
     }
 
+    int IndexIVF_HNSW_Grouping::build_batchs_to_index_ex(const system_conf_t &sys_conf, std::vector<size_t> &batch_list)
+    {
+        char path_vector[1024];
+        char path_precomputed_idx[1024];
+        int  rc;
+        auto sz = batch_list.size();
+        for (size_t i = 0; i < sz; i++) {
+            if (i == sz - 1)
+                rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], true);
+            else
+                rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], false);
+            if (rc) {
+                std::cout << "Failed to add vector batch " << batch_list[i] << " to index" << std::endl;
+                return -1;
+            }
+         }
+
+         return 0;
+    }
+
     int IndexIVF_HNSW_Grouping::build_batchs_to_index(const system_conf_t &sys_conf,
                                             const size_t batch_begin,
                                             const size_t batch_end)
@@ -1926,6 +1955,18 @@ out:
             batch_list.push_back(i);
 
         return build_batchs_to_index(sys_conf, batch_list);
+    }
+
+    int IndexIVF_HNSW_Grouping::build_batchs_to_index_ex(const system_conf_t &sys_conf,
+                                             const size_t batch_begin,
+                                             const size_t batch_end)
+    {
+        std::cout << "Build index for vector from batch: " << batch_begin << " to batch: " << batch_end << std::endl;
+        std::vector<size_t> batch_list(0);
+        for (size_t i = batch_begin; i <= batch_end; i++)
+             batch_list.push_back(i);
+
+        return build_batchs_to_index_ex(sys_conf, batch_list);
     }
 
     int IndexIVF_HNSW_Grouping::build_index(const system_conf_t &sys_conf,

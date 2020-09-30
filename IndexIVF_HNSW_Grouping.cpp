@@ -1913,9 +1913,9 @@ out:
         auto sz = batch_list.size();
         for (size_t i = 0; i < sz; i++) {
             if (i == sz - 1)
-                rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], true);
+                rc = add_one_batch_to_index(sys_conf, batch_list[i], true);
             else
-                rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], false);
+                rc = add_one_batch_to_index(sys_conf, batch_list[i], false);
             if (rc) {
                 std::cout << "Failed to add vector batch " << batch_list[i] << " to index" << std::endl;
                 return -1;
@@ -1995,6 +1995,32 @@ out:
         return rc;
     }
 
+    int IndexIVF_HNSW_Grouping::build_index_ex(const system_conf_t &sys_conf,
+                                            const size_t batch_begin,
+                                            const size_t batch_end,
+                                            const size_t index_ver)
+    {
+        int rc;
+        rc = build_batchs_to_index_ex(sys_conf, batch_begin, batch_end);
+        if (rc) {
+            // don't need to output message, already have in calling function
+            return rc;
+        }
+        rc = save_index(sys_conf, index_ver);
+        if (rc) {
+            // don't need to output message, already have in calling function
+            return rc;
+        }
+        rc = db_p->AppendIndexInfo(index_ver, batch_begin, batch_end);
+        if (!rc) {
+            std::cout << "Success build index for batch from " << batch_begin << " to " << batch_end << std::endl;
+        } else {
+            std::cout << "Failed to build index for batch from " << batch_begin << " to " << batch_end << std::endl;
+        }
+
+        return rc;
+    }
+
     int IndexIVF_HNSW_Grouping::rebuild_index(system_conf_t &sys_conf, size_t &batch_start, size_t &batch_end)
     {
         int rc;
@@ -2026,6 +2052,51 @@ out:
 
         // build_batchs_to_index
         rc = build_batchs_to_index(sys_conf, batchs_to_index);
+        if (rc) {
+            std::cout << "Failed to build index" << std::endl;
+            goto out;
+        }
+        std::cout << "Success build index" << std::endl;
+
+        // return batch range to build index
+        batch_start = batchs_to_index[0];
+        batch_end = batchs_to_index[batchs_to_index.size() - 1];
+
+    out:
+        return rc;
+    }
+
+    int IndexIVF_HNSW_Grouping::rebuild_index_ex(system_conf_t &sys_conf, size_t &batch_start, size_t &batch_end)
+    {
+        int rc;
+        std::vector<batch_info_t> batch_list;
+        std::vector<size_t> batchs_to_index;
+
+        rc = db_p->GetBatchList(batch_list);
+        if (rc) {
+            std::cout << "Failed to get batch info from database" << std::endl;
+            goto out;
+        }
+        if (batch_list.empty()) {
+            std::cout << "No batch exists, cannot build index" << std::endl;
+            rc = -1;
+            goto out;
+        }
+        for (std::vector<batch_info_t>::iterator it = batch_list.begin(); it != batch_list.end(); ++it) {
+            auto batch_info = *it;
+            if (batch_info.valid == false || batch_info.no_precomputed_idx == true)
+                continue;
+            batchs_to_index.push_back(batch_info.batch);
+        }
+
+        if (batchs_to_index.empty()) {
+            std::cout << "No batch can build index, either batch is invalid or precomputed index not build yet" << std::endl;
+            rc = -1;
+            goto out;
+        }
+
+        // build_batchs_to_index
+        rc = build_batchs_to_index_ex(sys_conf, batchs_to_index);
         if (rc) {
             std::cout << "Failed to build index" << std::endl;
             goto out;

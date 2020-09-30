@@ -233,7 +233,10 @@ namespace ivfhnsw {
 
         int build_index(const system_conf_t &sys_conf, const size_t batch_begin, const size_t batch_end, const size_t index_ver);
         int rebuild_index(system_conf_t &sys_conf, size_t &batch_start, size_t &batch_end);
-
+          
+        int build_index_ex(const system_conf_t &sys_conf, const size_t batch_begin, const size_t batch_end, const size_t index_ver);
+        int rebuild_index_ex(system_conf_t &sys_conf, size_t &batch_start, size_t &batch_end);
+  
         int load_index(const system_conf_t &sys_conf, const size_t idx_ver);
 
         int get_batchs_attr();

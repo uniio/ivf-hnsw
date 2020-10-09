@@ -1,4 +1,4 @@
-#include <faiss/ProductQuantizer.h>
+#include <faiss/impl/ProductQuantizer.h>
 
 int main()
 {

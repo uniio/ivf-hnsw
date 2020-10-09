@@ -52,7 +52,6 @@ int main(int argc, char** argv) {
     vec_id = atoi(argv[1]);
     max_search = vec_id;
     std::cout << "[Result] Exec: ./search_index " << vec_id  << std::endl;
-    
 
     // Initialize database interface
     // Following code is 1st start point in service, get work path first
@@ -226,7 +225,7 @@ void print_binary_vector(int len, uint8_t *vector)
     printf("[print binary vec] : ");
     for(int i=0; i<len; i++) {
         printf("%02x ",(unsigned char)vector[i]);
-    }   
+    }
     printf("\n");
 }
 
@@ -261,7 +260,7 @@ char *mmap_batchfile()
         printf("open %s failed\n", path);
         goto out;
     }
-	p_file = (char*)mmap(NULL, max_file_size, PROT_READ, MAP_SHARED, fd, 0);	
+    p_file = (char*)mmap(NULL, max_file_size, PROT_READ, MAP_SHARED, fd, 0);
     if(p_file == (char *)MAP_FAILED) {
         printf("mmap %s failed\n", path);
         goto out;
@@ -271,7 +270,6 @@ out:
         close(fd);
     }
     return p_file;
-     
 }
 
 void unmmap_batchfile(char *p, size_t size)

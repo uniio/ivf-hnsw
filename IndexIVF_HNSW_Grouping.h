@@ -270,7 +270,7 @@ namespace ivfhnsw {
 
         size_t getBatchByLabel(long label);
 
-        int get_vec_id(const char* vec_path, size_t vec_no, size_t& vec_id);
+        int get_vec_id(const char* vec_path, size_t vec_no, uint32_t& vec_id);
 
         /*
          * Add vectors in a batch file into index

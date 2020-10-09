@@ -521,7 +521,7 @@ namespace ivfhnsw
         return -1;
     }
 
-    int IndexIVF_HNSW_Grouping::get_vec_id(const char* vec_path, size_t vec_no, size_t& vec_id) {
+    int IndexIVF_HNSW_Grouping::get_vec_id(const char* vec_path, size_t vec_no, uint32_t& vec_id) {
         std::ifstream fs_input;
         fs_input.exceptions(~fs_input.goodbit);
         int           rc      = 0;
@@ -529,8 +529,8 @@ namespace ivfhnsw
 
         try {
             fs_input.open(vec_path, std::ios::binary);
-            fs_input.seekg(len_rec, fs_input.beg);
-            read_variable(fs_input, vec_id);
+            fs_input.seekg(len_rec * vec_no, fs_input.beg);
+            read_variable(fs_input, vec_id); // current vec_id is 4 Bytes
         }
         catch (...) {
             std::cout << "Error when read index file: " << vec_path << std::endl;
@@ -563,7 +563,8 @@ namespace ivfhnsw
          */
         SearchInfo_t sret;
         char         path_batch[1024];
-        size_t       vec_no, vec_id;
+        size_t       vec_no;
+        uint32_t     vec_id;
         int          rc;
         for (int di = k - 1; di >= 0; di--) {
             int batch_idx = getBatchByLabel(labels_base[di], vec_no);

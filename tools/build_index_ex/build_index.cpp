@@ -166,12 +166,27 @@ int main(int argc, char** argv) {
 
         std::cout << "----index " << i << " end memory " << std::endl;
         system(cmd.c_str());
-    }
+
+	rc = indexGroup[i]->save_index(sys_conf, ver);
+        if (rc) {
+            std::cout << "Failed to save index" << std::endl;
+            goto out;
+        }
+        std::cout << "Success to save index" << std::endl;
+
+/*        rc = db_p->AppendIndexInfo(ver, batch_start, batch_end);
+        if (rc) {
+            std::cout << "Failed to add index info to database" << std::endl;
+            goto out;
+        }
+        std::cout << "Success add rebuild index info to database" << std::endl;
+*/
+        }
     
-    std::cout << "Please check memory cost of two index" << std::endl;
-    while (1) {
-        sleep(1);
-    }
+    //	std::cout << "Please check memory cost of two index" << std::endl;
+    //	while (1) {
+    //   	    sleep(1);
+    //	}
 
 out:
     if (db_p != nullptr) delete db_p;
@@ -183,11 +198,6 @@ out:
             indexGroup[i] = nullptr;
        }
     }
-
-  //if (index[0] != nullptr)
-    //    delete index[0];
-   // if (index[1] != nullptr)
-     //   delete index[1];
 
     return rc;
 }

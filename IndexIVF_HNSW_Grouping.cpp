@@ -557,6 +557,12 @@ namespace ivfhnsw
         long  labels_base[k];
 
         search(k, query, distances_base, labels_base);
+        std::cout << "Original search result lables is ";
+        for(int i = 0; i < k; i++) {
+            std::cout << labels_base[i] << ", ";
+        }
+        std::cout << "" << std::endl;
+
 
         /*
          *  get vector id from disk according to result's lablel value (vector index in base vector file)
@@ -570,7 +576,8 @@ namespace ivfhnsw
             int batch_idx = getBatchByLabel(labels_base[di], vec_no);
             if (batch_idx == -1) {
                 std::cout << "Failed to get batch info from lable" << std::endl;
-                return -1;
+                continue;
+                //return -1;
             }
 
             get_path_vector(sys_conf, batch_idx, path_batch);

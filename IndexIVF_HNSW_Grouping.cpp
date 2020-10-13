@@ -512,6 +512,7 @@ namespace ivfhnsw
         bool   not_found = true;
 
         for (auto i = 0; i < sz; i++) {
+            std::cout << "getBatchByLabel: i=" << i << " batch_size=" << batch_list[i].batch_size << std::endl;
             sz_t += batch_list[i].batch_size;
             if (sz_t >= label) {
                 vec_no = batch_list[i].batch_size - (sz_t - label);

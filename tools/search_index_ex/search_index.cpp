@@ -143,15 +143,16 @@ int main(int argc, char** argv)
     /* get batch list */
     index->load_sys_conf();
     /* get batch list size */
-    rc = index->get_batchs_attr();
+    rc = index->get_batchs_attr_ex();
     if (rc) {
         std::cout << "Failed to Get Batch List File Size from DB" << std::endl;
-        //goto out;
+        goto out;
     }
 
     //==============
     // BEGIN SEARCH 
     //==============
+#if 0 // use search(size_t k, const float *x, float *distances, long *labels) {}
     {
         size_t correct = 0;
         float  distances[opt.k];
@@ -171,6 +172,26 @@ int main(int argc, char** argv)
         }
         std::cout << "Recall@" << opt.k << ": " << 1.0f * correct / opt.nq << std::endl;
     }
+#else // use search(size_t k, const float* query, std::vector<size_t>& id_vectors) {}
+    {
+        size_t correct = 0;
+        for (size_t i = 0; i < opt.nq; i++) {
+            std::vector<size_t> id_vectors;
+            index->search(opt.k, massQ.data() + i*sys_conf.dim, id_vectors);
+            std::cout << "query vector id: " << i << std::endl;
+            for(size_t j = 0; j < opt.k; j++) {
+                std::cout << "check search result " << id_vectors[j];
+                if((size_t)i == id_vectors[j]) {
+                    correct++;
+                    std::cout << " match" << std::endl;
+                } else {
+                    std::cout << " not match" << std::endl;
+                }
+            }
+        }
+        std::cout << "Recall@" << opt.k << ": " << 1.0f * correct / opt.nq << std::endl;
+    }
+#endif
 
 out:
     if (db_p != nullptr) delete db_p;

@@ -240,6 +240,7 @@ namespace ivfhnsw {
         int load_index(const system_conf_t &sys_conf, const size_t idx_ver);
 
         int get_batchs_attr();
+        int get_batchs_attr_ex();
 
         int getBatchByLabel(long label, size_t &vec_no);
 
@@ -271,6 +272,7 @@ namespace ivfhnsw {
         size_t getBatchByLabel(long label);
 
         int get_vec_id(const char* vec_path, size_t vec_no, uint32_t& vec_id);
+        int get_vec_id_ex(const char* vec_path, size_t vec_no, uint32_t& vec_id);
 
         /*
          * Add vectors in a batch file into index

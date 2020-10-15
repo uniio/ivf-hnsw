@@ -1995,8 +1995,8 @@ out:
         for (size_t i = 0; i < sz; i++) {
             if (i == sz - 1)
                 rc = add_one_batch_to_index(sys_conf, batch_list[i], true);
-            else
-                rc = add_one_batch_to_index(sys_conf, batch_list[i], false);
+            // else
+            //     rc = add_one_batch_to_index(sys_conf, batch_list[i], false);
             if (rc) {
                 std::cout << "Failed to add vector batch " << batch_list[i] << " to index" << std::endl;
                 return -1;
@@ -2015,8 +2015,8 @@ out:
         for (size_t i = 0; i < sz; i++) {
             if (i == sz - 1)
                 rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], true);
-            else
-                rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], false);
+            // else
+            //     rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], false);
             if (rc) {
                 std::cout << "Failed to add vector batch " << batch_list[i] << " to index" << std::endl;
                 return -1;

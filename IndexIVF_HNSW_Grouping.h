@@ -214,11 +214,25 @@ namespace ivfhnsw {
         int build_batchs_to_index(const system_conf_t &sys_conf, std::vector<batch_info_t> &batch_list);
         int add_one_batch_to_index(const system_conf_t &sys_conf, size_t batch_idx, bool final_add);
 
+        /*
+         * Add vectors in a batch file into index
+         *
+         * @param path_base  base vector file full path
+         * @param path_precomputed_idx  precomputed index file file full path
+         *
+         * return value:
+         *  0  success to add the batch vector
+         * -1  failed to add the batch vector
+         *
+         */
+        int add_one_batch_to_index(const char* path_base, const char* path_precomputed_idx, size_t base_id);
+        int add_one_batch_to_index(const system_conf_t& sys_conf, size_t batch_idx);
+
         int build_batchs_to_index_ex(const system_conf_t& sys_conf, const size_t batch_begin, const size_t batch_end);
         int build_batchs_to_index_ex(const system_conf_t& sys_conf, std::vector<size_t>& batch_list);
         int build_batchs_to_index_ex(const system_conf_t& sys_conf, std::vector<batch_info_t>& batch_list);
         int add_one_batch_to_index_ex(const system_conf_t& sys_conf, size_t batch_idx, bool final_add);
-        int add_one_batch_to_index_ex(const char *path_vector, const char *path_precomputed_idx);
+        int add_one_batch_to_index_ex(const char* path_vector, const char* path_precomputed_idx, size_t base_id);
         int add_one_batch_to_index_ex(const system_conf_t &sys_conf, size_t batch_idx);
 
         void get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
@@ -273,20 +287,6 @@ namespace ivfhnsw {
 
         int get_vec_id(const char* vec_path, size_t vec_no, uint32_t& vec_id);
         int get_vec_id_ex(const char* vec_path, size_t vec_no, uint32_t& vec_id);
-
-        /*
-         * Add vectors in a batch file into index
-         *
-         * @param path_base  base vector file full path
-         * @param path_precomputed_idx  precomputed index file file full path
-         *
-         * return value:
-         *  0  success to add the batch vector
-         * -1  failed to add the batch vector
-         *
-         */
-        int add_one_batch_to_index(const char* path_base, const char* path_precomputed_idx);
-        int add_one_batch_to_index(const system_conf_t& sys_conf, size_t batch_idx);
     };
 }
 #endif //IVF_HNSW_LIB_INDEXIVF_HNSW_GROUPING_H

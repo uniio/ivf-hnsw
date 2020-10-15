@@ -1586,17 +1586,19 @@ out:
         int rc;
         char path_vector[1024];
         char path_precomputed_idx[1024];
+        size_t base_id = batch_idx*1000000;
 
         // get vector file path and precomputed index file path
         // TODO: notice 03lu, because we use 1000 vector, format should be 001 002
         sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs", sys_conf.path_base_data, batch_idx);
         sprintf(path_precomputed_idx, "%s/split_1000/precomputed_idxs_%03lu.ivecs", sys_conf.path_base_data, batch_idx);
 
-        return add_one_batch_to_index(path_vector, path_precomputed_idx);
+        return add_one_batch_to_index(path_vector, path_precomputed_idx, base_id);
     }
 
     int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const char *path_vector,
-                                                       const char *path_precomputed_idx)
+                                                       const char *path_precomputed_idx,
+                                                       size_t base_id)
     {
         const size_t batch_size_max = 1000000;
         size_t groups_per_iter = 250000;
@@ -1692,7 +1694,8 @@ out:
                     idx_t idx = idx_batch[i] % groups_per_iter;
                     for (size_t j = 0; j < d; j++)
                         data[idx].push_back(batch[i * d + j]);
-                    ids[idx].push_back(b * batch_size + i);
+                    ids[idx].push_back(b * batch_size + i + base_id);
+                    // std::cout << "assign id: " << b * batch_size + i + base_id << std::endl;
                 }
             }
 
@@ -1753,18 +1756,19 @@ out:
         int rc;
         char path_vector[1024];
         char path_precomputed_idx[1024];
+        size_t base_id = batch_idx * 1000000;
 
         // get vector file path and precomputed index file path
         // TODO: notice 03lu, because we use 1000 vector, format should be 001 002
         sprintf(path_vector, "%s/split_1000/bigann_base_%03lu.bvecs", sys_conf.path_base_data, batch_idx);
         sprintf(path_precomputed_idx, "%s/split_1000/precomputed_idxs_%03lu.ivecs", sys_conf.path_base_data, batch_idx);
 
-        return add_one_batch_to_index_ex(path_vector, path_precomputed_idx);
+        return add_one_batch_to_index_ex(path_vector, path_precomputed_idx, base_id);
     }
 
-    int IndexIVF_HNSW_Grouping::add_one_batch_to_index_ex(const char *path_vector,
-                                                       const char *path_precomputed_idx)
-    {
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index_ex(const char* path_vector,
+                                                          const char* path_precomputed_idx,
+                                                          size_t base_id) {
         const size_t batch_size_max = 1000000;
         size_t groups_per_iter = 250000;
         std::vector<uint8_t> batch(batch_size_max * d);
@@ -1859,7 +1863,7 @@ out:
                     idx_t idx = idx_batch[i] % groups_per_iter;
                     for (size_t j = 0; j < d; j++)
                         data[idx].push_back(batch[i * d + j]);
-                    ids[idx].push_back(b * batch_size + i);
+                    ids[idx].push_back(b * batch_size + i + base_id);
                 }
             }
 
@@ -2027,7 +2031,7 @@ out:
                                             const size_t batch_end)
     {
         std::cout << "Build index for vector from batch: " << batch_begin << " to batch: " << batch_end << std::endl;
-        std::vector<size_t> batch_list(0);
+        std::vector<size_t> batch_list;
         for (size_t i = batch_begin; i <= batch_end; i++)
             batch_list.push_back(i);
 
@@ -2039,7 +2043,7 @@ out:
                                              const size_t batch_end)
     {
         std::cout << "Build index for vector from batch: " << batch_begin << " to batch: " << batch_end << std::endl;
-        std::vector<size_t> batch_list(0);
+        std::vector<size_t> batch_list;
         for (size_t i = batch_begin; i <= batch_end; i++)
              batch_list.push_back(i);
 

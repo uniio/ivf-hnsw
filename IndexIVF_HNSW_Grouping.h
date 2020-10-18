@@ -22,6 +22,7 @@ namespace ivfhnsw {
         bool do_pruning;      ///< Turn on/off pruning
 
         std::vector<std::vector<idx_t> > nn_centroid_idxs;    ///< Indices of the <nsubc> nearest centroids for each centroid
+        std::vector<std::vector<float> > nn_centroid_norms_L2sqr; /// < l2sqr of the <nsubc> nearest centroids for each centroid -- by FQY
         std::vector<std::vector<idx_t> > subgroup_sizes;      ///< Sizes of sub-groups for each group
         std::vector<float> alphas;    ///< Coefficients that determine the location of sub-centroids
 
@@ -50,6 +51,8 @@ namespace ivfhnsw {
           * @param ids               ids to store for the vectors (size: groups_size)
         */
         void add_group(size_t group_idx, size_t group_size, const float *x, const idx_t *ids);
+
+        void add_group_v2(size_t centroid_idx, size_t group_size, const float *x, const idx_t *ids);
 
         /*
          * @param  k             number of the closest vertices to search, ie. how many result need to return
@@ -127,6 +130,8 @@ namespace ivfhnsw {
          *
         */
         int load_pq_codebooks(system_conf_t &sys_conf, pq_conf_t &pq_conf);
+
+        bool pq_codebooks_exists(system_conf_t& sys_conf, pq_conf_t& pq_conf);
 
         /*
          * load quantizer into index
@@ -227,6 +232,7 @@ namespace ivfhnsw {
          */
         int add_one_batch_to_index(const char* path_base, const char* path_precomputed_idx, size_t base_id);
         int add_one_batch_to_index(const system_conf_t& sys_conf, size_t batch_idx);
+        int add_one_batch_to_index_v2(const char* path_base, const char* path_precomputed_idx, size_t base_id);
 
         int build_batchs_to_index_ex(const system_conf_t& sys_conf, const size_t batch_begin, const size_t batch_end);
         int build_batchs_to_index_ex(const system_conf_t& sys_conf, std::vector<size_t>& batch_list);

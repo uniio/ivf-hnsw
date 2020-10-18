@@ -35,6 +35,7 @@ namespace ivfhnsw
     {
         alphas.resize(nc);
         nn_centroid_idxs.resize(nc);
+        nn_centroid_norms_L2sqr.resize(nc); // add by FQY
         subgroup_sizes.resize(nc);
 
         query_centroid_dists.resize(nc);
@@ -80,6 +81,125 @@ namespace ivfhnsw
         return rc;
     }
 
+    void IndexIVF_HNSW_Grouping::add_group_v2(size_t centroid_idx, size_t group_size,
+                                           const float *data, const idx_t *idxs)
+    {
+        // Find NN centroids to source centroid
+        const float* centroid = quantizer->getDataByInternalId(centroid_idx);
+
+        if (nn_centroid_idxs[centroid_idx].size() != nsubc) {
+            std::cout << "resize for centroid " << centroid_idx << std::endl;
+            std::priority_queue<std::pair<float, idx_t>> nn_centroids_raw = quantizer->searchKnn(centroid, nsubc + 1);
+
+            // std::vector<float> centroid_vector_norms_L2sqr(nsubc);
+            nn_centroid_idxs[centroid_idx].resize(nsubc);
+            nn_centroid_norms_L2sqr[centroid_idx].resize(nsubc);
+            while (nn_centroids_raw.size() > 1) {
+                nn_centroid_norms_L2sqr[centroid_idx][nn_centroids_raw.size() - 2] = nn_centroids_raw.top().first;
+                nn_centroid_idxs[centroid_idx][nn_centroids_raw.size() - 2]        = nn_centroids_raw.top().second;
+
+                nn_centroids_raw.pop();
+            }
+        }
+
+        // don't move this to begining of function, otherwise, some centroids's nearest neighbor cannot be setup
+        // this will lead to random strange bug
+        if (group_size == 0)
+            return;
+
+        const float *centroid_vector_norms = nn_centroid_norms_L2sqr[centroid_idx].data();
+        const idx_t *nn_centroids = nn_centroid_idxs[centroid_idx].data();
+
+        // Compute centroid-neighbor_centroid and centroid-group_point vectors
+        std::vector<float> centroid_vectors(nsubc * d);
+        for (size_t subc = 0; subc < nsubc; subc++) {
+            const float *neighbor_centroid = quantizer->getDataByInternalId(nn_centroids[subc]);
+            faiss::fvec_madd(d, neighbor_centroid, -1., centroid, centroid_vectors.data() + subc * d);
+        }
+
+        // Compute alpha for group vectors
+        // FIXIT, fatal bug in multiple add batch mode
+        alphas[centroid_idx] = compute_alpha(centroid_vectors.data(), data, centroid,
+                                             centroid_vector_norms, group_size);
+
+        // Compute final subcentroids
+        std::vector<float> subcentroids(nsubc * d);
+        for (size_t subc = 0; subc < nsubc; subc++) {
+            const float *centroid_vector = centroid_vectors.data() + subc * d;
+            float *subcentroid = subcentroids.data() + subc * d;
+            faiss::fvec_madd(d, centroid, alphas[centroid_idx], centroid_vector, subcentroid);
+        }
+
+        // Find subcentroid idx
+        std::vector<idx_t> subcentroid_idxs(group_size);
+        compute_subcentroid_idxs(subcentroid_idxs.data(), subcentroids.data(), data, group_size);
+
+        // Compute residuals
+        std::vector<float> residuals(group_size * d);
+        compute_residuals(group_size, data, residuals.data(), subcentroids.data(), subcentroid_idxs.data());
+
+        // Rotate residuals
+        if (do_opq){
+            std::vector<float> copy_residuals(group_size * d);
+            memcpy(copy_residuals.data(), residuals.data(), group_size * d * sizeof(float));
+            opq_matrix->apply_noalloc(group_size, copy_residuals.data(), residuals.data());
+        }
+
+        // Compute codes
+        std::vector<uint8_t> xcodes(group_size * code_size);
+        pq->compute_codes(residuals.data(), xcodes.data(), group_size);
+
+        // Decode codes
+        std::vector<float> decoded_residuals(group_size * d);
+        pq->decode(xcodes.data(), decoded_residuals.data(), group_size);
+
+        // Reverse rotation
+        if (do_opq){
+            std::vector<float> copy_decoded_residuals(group_size * d);
+            memcpy(copy_decoded_residuals.data(), decoded_residuals.data(), group_size * d * sizeof(float));
+            opq_matrix->transform_transpose(group_size, copy_decoded_residuals.data(), decoded_residuals.data());
+        }
+
+        // Reconstruct data
+        std::vector<float> reconstructed_x(group_size * d);
+        reconstruct(group_size, reconstructed_x.data(), decoded_residuals.data(),
+                    subcentroids.data(), subcentroid_idxs.data());
+
+        // Compute norms
+        std::vector<float> norms(group_size);
+        faiss::fvec_norms_L2sqr(norms.data(), reconstructed_x.data(), d, group_size);
+
+        // Compute norm codes
+        std::vector<uint8_t> xnorm_codes(group_size);
+        norm_pq->compute_codes(norms.data(), xnorm_codes.data(), group_size);
+
+        // Distribute codes
+        std::vector<std::vector<idx_t> > construction_ids(nsubc);
+        std::vector<std::vector<uint8_t> > construction_codes(nsubc);
+        std::vector<std::vector<uint8_t> > construction_norm_codes(nsubc);
+        for (size_t i = 0; i < group_size; i++) {
+            idx_t idx = idxs[i];
+            idx_t subcentroid_idx = subcentroid_idxs[i];
+
+            construction_ids[subcentroid_idx].push_back(idx);
+            construction_norm_codes[subcentroid_idx].push_back(xnorm_codes[i]);
+            for (size_t j = 0; j < code_size; j++)
+                construction_codes[subcentroid_idx].push_back(xcodes[i * code_size + j]);
+        }
+        // Add codes to the index
+        for (size_t subc = 0; subc < nsubc; subc++) {
+            idx_t subgroup_size = construction_norm_codes[subc].size();
+            subgroup_sizes[centroid_idx].push_back(subgroup_size);
+
+            for (size_t i = 0; i < subgroup_size; i++) {
+                ids[centroid_idx].push_back(construction_ids[subc][i]);
+                for (size_t j = 0; j < code_size; j++)
+                    codes[centroid_idx].push_back(construction_codes[subc][i * code_size + j]);
+                norm_codes[centroid_idx].push_back(construction_norm_codes[subc][i]);
+            }
+        }
+    }
+
     void IndexIVF_HNSW_Grouping::add_group(size_t centroid_idx, size_t group_size,
                                            const float *data, const idx_t *idxs)
     {
@@ -101,6 +221,9 @@ namespace ivfhnsw
 
             nn_centroids_raw.pop();
         }
+
+        // don't move this to begining of function, otherwise, some centroids's nearest neighbor cannot be setup
+        // this will lead to random strange bug
         if (group_size == 0)
             return;
 
@@ -161,7 +284,7 @@ namespace ivfhnsw
         reconstruct(group_size, reconstructed_x.data(), decoded_residuals.data(),
                     subcentroids.data(), subcentroid_idxs.data());
 
-        // Compute norms 
+        // Compute norms
         std::vector<float> norms(group_size);
         faiss::fvec_norms_L2sqr(norms.data(), reconstructed_x.data(), d, group_size);
 
@@ -914,7 +1037,7 @@ namespace ivfhnsw
             for (size_t i = 0; i < group_size; i++)
                 faiss::fvec_madd(d, decoded_residuals.data() + i*d, 1., subcentroids+i*d, reconstructed_x.data() + i*d);
 
-            // Compute norms 
+            // Compute norms
             std::vector<float> group_norms(group_size);
             faiss::fvec_norms_L2sqr(group_norms.data(), reconstructed_x.data(), d, group_size);
 
@@ -1088,8 +1211,8 @@ namespace ivfhnsw
                                                size_t n_train, size_t n_sub_train, size_t nsubc)
     {
         int rc = 0;
-        char path_full[1024];
         char path_ver[1024];
+        char path_pq[1024], path_norm_pq[1024], path_matrix_pq[1024];
         uint32_t dim;
         size_t nvecs;
         std::vector<float> trainvecs;
@@ -1102,6 +1225,22 @@ namespace ivfhnsw
 
         // Prepare output directory for store PQ files
         sprintf(path_ver, "%s/%lu", path_model, pq_ver);
+        {
+            if (with_opq)
+                sprintf(path_matrix_pq, "%s/matrix_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+
+            sprintf(path_pq, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+            sprintf(path_norm_pq, "%s/norm_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
+
+            if (with_opq) {
+                if (exists(path_pq) && exists(path_norm_pq) && exists(path_matrix_pq))
+                    return 0;
+            }
+            else {
+                if (exists(path_pq) && exists(path_norm_pq))
+                    return 0;
+            }
+        }
         if (!exists(path_ver)) {
             if (mkdir_p(path_ver, 0755)) {
                 std::cout << "Failed to create directory: " << path_ver << std::endl;
@@ -1133,7 +1272,6 @@ namespace ivfhnsw
             goto err_handle;
         }
 
-
         try {
             // Set Random Subset of sub_nt trainvecs
             std::cout << "Get random subset with vector number of: " << n_sub_train << std::endl;
@@ -1156,19 +1294,16 @@ namespace ivfhnsw
         }
 
         try {
-            sprintf(path_full, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
-            std::cout << "Saving Residual PQ codebook to " << path_full << std::endl;
-            faiss::write_ProductQuantizer(pq, path_full);
-
-            sprintf(path_full, "%s/norm_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
-            std::cout << "Saving Norm PQ codebook to " << path_full<< std::endl;
-            faiss::write_ProductQuantizer(norm_pq, path_full);
-
             if (with_opq) {
-                sprintf(path_full, "%s/matrix_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
-                std::cout << "Saving Residual OPQ rotation matrix to " << path_full<< std::endl;
-                faiss::write_VectorTransform(opq_matrix, path_full);
+                std::cout << "Saving Residual OPQ rotation matrix to " << path_matrix_pq << std::endl;
+                faiss::write_VectorTransform(opq_matrix, path_matrix_pq);
             }
+
+            std::cout << "Saving Residual PQ codebook to " << path_pq << std::endl;
+            faiss::write_ProductQuantizer(pq, path_pq);
+
+            std::cout << "Saving Norm PQ codebook to " << path_norm_pq << std::endl;
+            faiss::write_ProductQuantizer(norm_pq, path_norm_pq);
         } catch (...) {
             std::cout << "Failed to write PQ codebooks" << std::endl;
             goto err_handle;
@@ -1181,14 +1316,12 @@ err_handle:
             rc = -1;
             std::cout << "Failed when build PQ files" << std::endl;
 
-            sprintf(path_full, "%s/pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
-            unlink(path_full);
-            sprintf(path_full, "%s/norm_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
-            unlink(path_full);
-            if (with_opq) {
-                sprintf(path_full, "%s/matrix_pq%lu_nsubc%lu.opq", path_ver, code_size, nsubc);
-                unlink(path_full);
-            }
+            if (exists(path_pq))
+                unlink(path_pq);
+            if (exists(path_norm_pq))
+                unlink(path_norm_pq);
+            if (exists(path_matrix_pq))
+                unlink(path_matrix_pq);
         }
 
 out:
@@ -1208,11 +1341,37 @@ out:
         return db_p->AppendPQInfo(pq_conf.ver, pq_conf.with_opq, sys_conf.nsubc);
     }
 
+    bool IndexIVF_HNSW_Grouping::pq_codebooks_exists(system_conf_t& sys_conf, pq_conf_t& pq_conf) {
+        char path_ver[1024], path_pq[1024], path_norm_pq[1024], path_matrix_pq[1024];
+
+        if (pq_conf.ver == 0) {
+            std::cout << "Invalid PQ version 0" << std::endl;
+            assert(0);
+        }
+
+        // Prepare output directory for store PQ files
+        sprintf(path_ver, "%s/%lu", sys_conf.path_base_model, (pq_conf.ver));
+        if (pq_conf.with_opq)
+            sprintf(path_matrix_pq, "%s/matrix_pq%lu_nsubc%lu.opq", path_ver, sys_conf.code_size, sys_conf.nsubc);
+
+        sprintf(path_pq, "%s/pq%lu_nsubc%lu.opq", path_ver, sys_conf.code_size, sys_conf.nsubc);
+        sprintf(path_norm_pq, "%s/norm_pq%lu_nsubc%lu.opq", path_ver, sys_conf.code_size, sys_conf.nsubc);
+
+        if (pq_conf.with_opq) {
+            if (exists(path_pq) && exists(path_norm_pq) && exists(path_matrix_pq))
+                return true;
+        } else {
+            if (exists(path_pq) && exists(path_norm_pq))
+                return true;
+        }
+
+        return false;
+    }
+
     // TODO: I/O error handler when read PQ codebooks from file
     // or force core dump when failed to read pq codebooks
     // to my understanding core dump is ok
-    int IndexIVF_HNSW_Grouping::load_pq_codebooks(system_conf_t &sys_conf, pq_conf_t &pq_conf)
-    {
+    int IndexIVF_HNSW_Grouping::load_pq_codebooks(system_conf_t& sys_conf, pq_conf_t& pq_conf) {
         char path_full[1024];
 
         std::cout << "Load latest PQ files with version: " << pq_conf.ver << std::endl;
@@ -1360,10 +1519,10 @@ out:
 
         StopW stopw = StopW();
         std::ifstream input;
-
         input.exceptions(~input.goodbit);
         std::ofstream output;
         output.exceptions(~output.goodbit);
+
         try {
             input.open(path_base, std::ios::binary);
             output.open(path_prcomputed_index, std::ios::binary | std::ios::trunc);
@@ -1594,6 +1753,65 @@ out:
         sprintf(path_precomputed_idx, "%s/split_1000/precomputed_idxs_%03lu.ivecs", sys_conf.path_base_data, batch_idx);
 
         return add_one_batch_to_index(path_vector, path_precomputed_idx, base_id);
+    }
+
+    int IndexIVF_HNSW_Grouping::add_one_batch_to_index_v2(const char* path_vector, const char* path_precomputed_idx, size_t base_id)
+    {
+        uint32_t dim;
+        size_t   nvecs;
+        if (get_vec_attr(path_vector, dim, nvecs)) {
+            std::cout << "Failed to access file: " << path_vector << std::endl;
+            return -1;
+        }
+
+        size_t batch_size = 1000000;
+        size_t nbatches   = nvecs / batch_size;
+        if (nbatches * batch_size != nvecs)
+            nbatches++;
+
+        std::cout << "Build index for vector file: " << path_vector << std::endl;
+        std::cout << "Vector number: " << nvecs << std::endl;
+        std::cout << "Batch number: " << nbatches << std::endl;
+
+        std::vector<uint8_t> batch(batch_size * dim);
+        std::vector<idx_t>   idx_batch(batch_size);
+
+        std::vector<std::vector<uint8_t>> data(nc);
+        std::vector<std::vector<idx_t>>   ids(nc);
+
+        std::ifstream base_input(path_vector, std::ios::binary);
+        std::ifstream idx_input(path_precomputed_idx, std::ios::binary);
+        if (!base_input.is_open() || !idx_input.is_open())
+            return -1;
+
+        for (size_t b = 0; b < nbatches; b++) {
+            if (nvecs < batch_size)
+                batch_size = nvecs;
+            readXvec<uint8_t>(base_input, batch.data(), dim, batch_size);
+            readXvec<idx_t>(idx_input, idx_batch.data(), batch_size, 1);
+
+            for (size_t i = 0; i < batch_size; i++) {
+                idx_t idx = idx_batch[i];
+                for (size_t j = 0; j < dim; j++)
+                    data[idx].push_back(batch[i * dim + j]);
+                ids[idx].push_back(b * batch_size + i + base_id);
+            }
+            if (nvecs > batch_size)
+                nvecs -= batch_size;
+        }
+
+#pragma omp parallel for
+        for (size_t i = 0; i < nc; i++) {
+            const size_t       group_size = ids[i].size();
+            std::vector<float> group_data(group_size * dim);
+            // Convert bytes to floats
+            for (size_t k = 0; k < group_size * dim; k++)
+                group_data[k] = 1. * data[i][k];
+
+            add_group_v2(i, group_size, group_data.data(), ids[i].data());
+        }
+
+        return 0;
     }
 
     int IndexIVF_HNSW_Grouping::add_one_batch_to_index(const char *path_vector,
@@ -1995,8 +2213,8 @@ out:
         for (size_t i = 0; i < sz; i++) {
             if (i == sz - 1)
                 rc = add_one_batch_to_index(sys_conf, batch_list[i], true);
-            // else
-            //     rc = add_one_batch_to_index(sys_conf, batch_list[i], false);
+            else
+                rc = add_one_batch_to_index(sys_conf, batch_list[i], false);
             if (rc) {
                 std::cout << "Failed to add vector batch " << batch_list[i] << " to index" << std::endl;
                 return -1;
@@ -2015,8 +2233,8 @@ out:
         for (size_t i = 0; i < sz; i++) {
             if (i == sz - 1)
                 rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], true);
-            // else
-            //     rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], false);
+            else
+                rc = add_one_batch_to_index_ex(sys_conf, batch_list[i], false);
             if (rc) {
                 std::cout << "Failed to add vector batch " << batch_list[i] << " to index" << std::endl;
                 return -1;

@@ -203,15 +203,20 @@ namespace ivfhnsw
     void IndexIVF_HNSW_Grouping::add_group(size_t centroid_idx, size_t group_size,
                                            const float *data, const idx_t *idxs)
     {
+        bool isNew = (norm_codes[centroid_idx].size() == 0) ? true : false;
         // Find NN centroids to source centroid 
         const float *centroid = quantizer->getDataByInternalId(centroid_idx);
         std::priority_queue<std::pair<float, idx_t>> nn_centroids_raw = quantizer->searchKnn(centroid, nsubc + 1);
 
         std::vector<float> centroid_vector_norms_L2sqr(nsubc);
-        nn_centroid_idxs[centroid_idx].resize(nsubc);
+        if(isNew) {
+            nn_centroid_idxs[centroid_idx].resize(nsubc);
+        }
         while (nn_centroids_raw.size() > 1) {
             centroid_vector_norms_L2sqr[nn_centroids_raw.size() - 2] = nn_centroids_raw.top().first;
-            nn_centroid_idxs[centroid_idx][nn_centroids_raw.size() - 2] = nn_centroids_raw.top().second;
+            if(isNew) {
+                nn_centroid_idxs[centroid_idx][nn_centroids_raw.size() - 2] = nn_centroids_raw.top().second;
+            }
 
             if (fp_centriod) {
                 // if centriod info trace enabled, log it
@@ -238,8 +243,10 @@ namespace ivfhnsw
         }
 
         // Compute alpha for group vectors
-        alphas[centroid_idx] = compute_alpha(centroid_vectors.data(), data, centroid,
-                                             centroid_vector_norms, group_size);
+        if(isNew) {
+            alphas[centroid_idx] = compute_alpha(centroid_vectors.data(), data, centroid,
+                                                centroid_vector_norms, group_size);
+        }
 
         // Compute final subcentroids
         std::vector<float> subcentroids(nsubc * d);
@@ -308,7 +315,11 @@ namespace ivfhnsw
         // Add codes to the index
         for (size_t subc = 0; subc < nsubc; subc++) {
             idx_t subgroup_size = construction_norm_codes[subc].size();
-            subgroup_sizes[centroid_idx].push_back(subgroup_size);
+            if(isNew) {
+                subgroup_sizes[centroid_idx].push_back(subgroup_size);
+            } else {
+                subgroup_sizes[centroid_idx][subc] += subgroup_size;
+            }
 
             for (size_t i = 0; i < subgroup_size; i++) {
                 ids[centroid_idx].push_back(construction_ids[subc][i]);
@@ -677,12 +688,12 @@ namespace ivfhnsw
         bool   not_found = true;
 
         for (auto i = 0; i < sz; i++) {
-            std::cout << "getBatchByLabel: i=" << i << " batch_size=" << batch_list[i].batch_size << std::endl;
+            //std::cout << "getBatchByLabel: i=" << i << " batch_size=" << batch_list[i].batch_size << std::endl;
             sz_t += batch_list[i].batch_size;
             if (sz_t >= label) {
                 vec_no = batch_list[i].batch_size - (sz_t - label);
-                printf("batch_size=%ld, sz_t=%ld, label=%ld, vec_no=%ld\n",
-                    batch_list[i].batch_size, sz_t, label, vec_no);
+                //printf("batch_size=%ld, sz_t=%ld, label=%ld, vec_no=%ld\n",
+                //    batch_list[i].batch_size, sz_t, label, vec_no);
                 return i;
             }
         }
@@ -749,7 +760,7 @@ namespace ivfhnsw
         long  labels_base[k];
 
         search(k, query, distances_base, labels_base);
-        std::cout << "Original search result lables is ";
+        std::cout << "[ivf-search] Original search result lables is ";
         for(int i = 0; i < k; i++) {
             std::cout << labels_base[i] << ", ";
         }

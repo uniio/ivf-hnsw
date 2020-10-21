@@ -175,13 +175,14 @@ int main(int argc, char** argv)
 #else // use search(size_t k, const float* query, std::vector<size_t>& id_vectors) {}
     {
         size_t correct = 0;
+        size_t base_id = 1000000;
         for (size_t i = 0; i < opt.nq; i++) {
             std::vector<size_t> id_vectors;
             index->search(opt.k, massQ.data() + i*sys_conf.dim, id_vectors);
-            std::cout << "query vector id: " << i << std::endl;
+            std::cout << "query vector id: " << i + base_id << std::endl;
             for(size_t j = 0; j < opt.k; j++) {
                 std::cout << "check search result " << id_vectors[j];
-                if((size_t)i == id_vectors[j]) {
+                if((size_t)(i + base_id) == id_vectors[j]) {
                     correct++;
                     std::cout << " match" << std::endl;
                 } else {

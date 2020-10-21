@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     pq_conf_t               pq_conf;
     Index_DB*               db_p  = nullptr;
     IndexIVF_HNSW_Grouping* index = nullptr;
-    char                    path_vector[1024];
+    char                    path_vector[1024] = "";
     size_t                  nq = 10000;
     size_t                  k  = 10;
     size_t                  correct = 0;
@@ -57,8 +57,6 @@ int main(int argc, char** argv)
 
     index         = new IndexIVF_HNSW_Grouping(sys_conf.dim, sys_conf.nc, sys_conf.code_size, 8, sys_conf.nsubc, db_p);
     index->do_opq = pq_conf.with_opq;
-
-    ver = 1;
 
     rc = index->load_quantizer(sys_conf, pq_conf);
     if (rc) {
@@ -127,11 +125,11 @@ int main(int argc, char** argv)
         // std::vector<size_t> id_vectors;
         // index->search(k, massQ.data() + i * sys_conf.dim, id_vectors);
         index->search(k, massQ.data() + i * sys_conf.dim, distances, labels);
-        std::cout << "query vector id: " << i << std::endl;
+        std::cout << "query vector id: " << i + base_id_query << std::endl;
         for (size_t j = 0; j < k; j++) {
             // std::cout << "check search result " << id_vectors[j];
             std::cout << "check search result " << labels[j];
-            if ((i + base_id_query) == labels[j]) {
+            if ((long)(i + base_id_query) == labels[j]) {
                 // if (((size_t)i + base_id_query) == id_vectors[j]) {
                     correct++;
                     std::cout << " match" << std::endl;

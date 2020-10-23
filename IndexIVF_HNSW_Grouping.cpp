@@ -766,7 +766,6 @@ namespace ivfhnsw
         }
         std::cout << "" << std::endl;
 
-
         /*
          *  get vector id from disk according to result's lablel value (vector index in base vector file)
          */
@@ -778,7 +777,7 @@ namespace ivfhnsw
         for (int di = k - 1; di >= 0; di--) {
             int batch_idx = getBatchByLabel(labels_base[di], vec_no);
             if (batch_idx == -1) {
-                std::cout << "Failed to get batch info from lable" << std::endl;
+                //std::cout << "Failed to get batch info from lable" << std::endl;
                 continue;
                 //return -1;
             }

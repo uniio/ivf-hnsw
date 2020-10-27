@@ -593,6 +593,7 @@ namespace ivfhnsw
             std::cout << "Failed to get batch list" << std::endl;
             return rc;
         }
+        std::cout << "Success to get batch list size=" << batch_list.size() << std::endl;
 
         return rc;
     }
@@ -653,13 +654,17 @@ namespace ivfhnsw
 
             sz = batch_list.size();
             if (sz == 0) {
-                std::cout << "BUG: batch_info table cannot empty when call this function" << std::endl;
+                std::cout << ">>[ivf-hnsw] BUG: batch_info table cannot empty when call this function" << std::endl;
                 assert(0);
             }
         }
 
         for (auto i = 0; i < sz; i++) {
             auto _batch = batch_list[i];
+            if(_batch.valid == false) {
+                batch_list[i].batch_size = 0;
+                std::cout << ">>[ivf-hnsw] batch_no=" << i << " batch_size=" << batch_list[i].batch_size << std::endl;
+            }
 
             struct stat st;
             char        path_batch[1024];
@@ -676,6 +681,7 @@ namespace ivfhnsw
             size_t rec_size   = sizeof(uint32_t) + sizeof(uint32_t) + d * sizeof(uint8_t);
             //_batch.batch_size = st.st_size / rec_size;
             batch_list[i].batch_size = st.st_size / rec_size;
+            std::cout << ">>[ivf-hnsw] batch_no=" << i << " batch_size=" << batch_list[i].batch_size << std::endl;
         }
 
         return 0;
@@ -777,7 +783,7 @@ namespace ivfhnsw
         for (int di = k - 1; di >= 0; di--) {
             int batch_idx = getBatchByLabel(labels_base[di], vec_no);
             if (batch_idx == -1) {
-                //std::cout << "Failed to get batch info from lable" << std::endl;
+                std::cout << "Failed to get batch info from lable" << std::endl;
                 continue;
                 //return -1;
             }
@@ -815,6 +821,12 @@ namespace ivfhnsw
     }
 
     int IndexIVF_HNSW_Grouping::commit_batch(size_t batch_idx) {
+        batch_info_t batch_cur;
+        batch_cur.no_precomputed_idx = true;
+        batch_cur.valid = true;
+        batch_cur.batch = batch_idx;
+        // TODO :batch_cur.start_id = ;
+        batch_list.push_back(batch_cur);
         return db_p->ActiveBatch(batch_idx);
     }
 
@@ -1485,6 +1497,8 @@ out:
             return rc;
         }
 
+        //set batch_list and db no_precomputed_idx = false
+        batch_list[batch_idx].no_precomputed_idx = false;
         rc = db_p->ActivePrecomputedIndex(batch_idx);
         if (rc) {
             std::cout << "Failed to active precomputing index for batch: " << batch_idx << std::endl;
@@ -1614,6 +1628,8 @@ out:
             return rc;
         }
 
+        //set batch_list and db no_precomputed_idx = false
+        batch_list[batch_idx].no_precomputed_idx = false;
         rc = db_p->ActivePrecomputedIndex(batch_idx);
         if (rc) {
             std::cout << "Failed to active precomputing index for batch: " << batch_idx << std::endl;

@@ -612,8 +612,8 @@ namespace ivfhnsw
 
             sz = batch_list.size();
             if (sz == 0) {
-                std::cout << "BUG: batch_info table cannot empty when call this function" << std::endl;
-                assert(0);
+                std::cout << "WARNING: batch_info table cannot empty when call this function" << std::endl;
+                return 0;
             }
         }
 
@@ -653,8 +653,8 @@ namespace ivfhnsw
 
             sz = batch_list.size();
             if (sz == 0) {
-                std::cout << "BUG: batch_info table cannot empty when call this function" << std::endl;
-                assert(0);
+                std::cout << "WARNING: batch_info table cannot empty when call this function" << std::endl;
+                return 0;
             }
         }
 
@@ -690,7 +690,7 @@ namespace ivfhnsw
         for (auto i = 0; i < sz; i++) {
             //std::cout << "getBatchByLabel: i=" << i << " batch_size=" << batch_list[i].batch_size << std::endl;
             sz_t += batch_list[i].batch_size;
-            if (sz_t >= label) {
+            if (sz_t > label) {
                 vec_no = batch_list[i].batch_size - (sz_t - label);
                 //printf("batch_size=%ld, sz_t=%ld, label=%ld, vec_no=%ld\n",
                 //    batch_list[i].batch_size, sz_t, label, vec_no);

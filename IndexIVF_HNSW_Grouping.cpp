@@ -1595,6 +1595,12 @@ out:
                 rc = -1;
                 break;
             }
+
+            // temporary change for pretty printing
+            if (1) {
+                std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                          << "100%" << std::endl;
+            }
         }
 
         return rc;
@@ -1723,6 +1729,11 @@ out:
             } catch (...) {
                 rc = -1;
                 break;
+            }
+
+            if (1) {
+                std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                          << "100%" << std::endl;
             }
         }
 

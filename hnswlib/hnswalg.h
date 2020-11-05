@@ -42,7 +42,7 @@ static void readBinaryPOD(std::istream &in, T &podRef) {
 }
 
 namespace hnswlib {
-    typedef uint32_t idx_t;
+    typedef int32_t idx_t;
 
     struct HierarchicalNSW
     {

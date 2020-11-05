@@ -496,6 +496,12 @@ namespace ivfhnsw
                     for (size_t j = 0; j < subgroup_size; j++) {
                         const float term4 = 2 * pq_L2sqr(code + j * code_size);
                         const float dist = term1 + term2 + norms[j] - term4; //term3 = norms[j]
+
+                        // in delete_vid(), set vid which wanna be deleted in index to -1
+                        if(id[j] == -1) {
+                            std::cout << "[search] skip vid=" << id[j] << std::endl;
+                            continue;
+                        }
 #ifdef TRACE_NEIGHBOUR
                         if (log_trace.is_open()) {
                             query_vector_dists.push_back(dist);
@@ -535,6 +541,52 @@ namespace ivfhnsw
 
         if (do_opq)
             delete const_cast<float *>(query);
+    }
+
+    int IndexIVF_HNSW_Grouping::delete_vid(const float *x, idx_t vid)
+    {
+        int rc = -1;
+        idx_t centroid_idxs[nprobe]; // Indices of the nearest coarse centroids
+
+        // For correct search using OPQ rotate a query
+        const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
+
+#ifdef TRACE_CENTROIDS
+        trace_query_centroid_dists.clear();
+        trace_centroid_idxs.clear();
+#endif
+
+        // Find the nearest coarse centroids to the query
+        auto coarse = quantizer->searchKnn(query, nprobe);
+        for (int_fast32_t i = nprobe - 1; i >= 0; i--) {
+            idx_t centroid_idx = coarse.top().second;
+            centroid_idxs[i] = centroid_idx;
+
+#ifdef TRACE_CENTROIDS
+            trace_query_centroid_dists.push_back(coarse.top().first);
+            trace_centroid_idxs.push_back(coarse.top().second);
+#endif
+
+            coarse.pop();
+        }
+        for (size_t i = 0; i < nprobe; i++) {
+            const idx_t centroid_idx = centroid_idxs[i];
+            const size_t group_size = norm_codes[centroid_idx].size();
+
+            if (group_size == 0)
+                continue;
+
+            //std::cout << "[delete_vid]" << "no=" << i << " centroid_idx=" << centroid_idx << " group_size=" << group_size << std::endl;
+            for(int x = 0; x < ids[centroid_idx].size(); x++) {
+                if(ids[centroid_idx][x] == vid) {
+                    std::cout << "[delete_vid]find ids[" << centroid_idx << "][" << x << "]=" << ids[centroid_idx][x] << std::endl;
+                    ids[centroid_idx][x] = -1;
+                    rc = 0;
+                    return rc;
+                }
+            }
+        }
+        return rc;
     }
 
     void IndexIVF_HNSW_Grouping::searchDisk(size_t k, const float *query, float *distances,

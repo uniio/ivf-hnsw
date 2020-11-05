@@ -67,6 +67,8 @@ namespace ivfhnsw {
         int search(size_t k, const float* query, std::vector<size_t> &id_vectors);
         int search(size_t k, const uint8_t* query, std::vector<size_t>& id_vectors);
 
+        int delete_vid(const float *x, idx_t vid);
+
         // apply disk search based on ANN search result
         void searchDisk(size_t k, const float *query, float *distances, long *labels, const char *path_base);
 

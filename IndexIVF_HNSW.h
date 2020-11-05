@@ -48,7 +48,7 @@ namespace ivfhnsw {
     */
     struct IndexIVF_HNSW
     {
-        typedef uint32_t idx_t;     ///< all indices are this type
+        typedef int32_t idx_t;     ///< all indices are this type
 
         size_t d;               ///< Vector dimension
         size_t nc;              ///< Number of centroids

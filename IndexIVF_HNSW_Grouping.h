@@ -69,6 +69,8 @@ namespace ivfhnsw {
 
         int delete_vid(const float *x, idx_t vid);
 
+        int delete_vid_v2(const float *x, idx_t vid);
+
         // apply disk search based on ANN search result
         void searchDisk(size_t k, const float *query, float *distances, long *labels, const char *path_base);
 

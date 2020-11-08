@@ -67,6 +67,7 @@ namespace ivfhnsw {
         std::vector<std::vector<idx_t> > ids;           ///< Inverted lists for indexes
         std::vector<std::vector<uint8_t> > codes;       ///< PQ codes of residuals
         std::vector<std::vector<uint8_t> > norm_codes;  ///< PQ codes of norms of reconstructed base vectors
+        std::vector<std::vector<uint8_t> > subc_idx;           ///< trace sub group info for every index
 
         // information associated with hdr.vec file
         orcvhdr_t hdr_idx;

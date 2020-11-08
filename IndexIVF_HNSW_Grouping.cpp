@@ -35,7 +35,7 @@ namespace ivfhnsw
     {
         alphas.resize(nc);
         nn_centroid_idxs.resize(nc);
-        nn_centroid_norms_L2sqr.resize(nc); // add by FQY
+        nn_centroid_norms_L2sqr.resize(nc);
         subgroup_sizes.resize(nc);
 
         query_centroid_dists.resize(nc);
@@ -82,22 +82,21 @@ namespace ivfhnsw
     }
 
     void IndexIVF_HNSW_Grouping::add_group_v2(size_t centroid_idx, size_t group_size,
-                                           const float *data, const idx_t *idxs)
+                                              const float *data, const idx_t *idxs)
     {
+        bool isNew = (norm_codes[centroid_idx].size() == 0) ? true : false;
         // Find NN centroids to source centroid
-        const float* centroid = quantizer->getDataByInternalId(centroid_idx);
+        const float *centroid = quantizer->getDataByInternalId(centroid_idx);
 
-        if (nn_centroid_idxs[centroid_idx].size() != nsubc) {
-            std::cout << "resize for centroid " << centroid_idx << std::endl;
-            std::priority_queue<std::pair<float, idx_t>> nn_centroids_raw = quantizer->searchKnn(centroid, nsubc + 1);
-
-            // std::vector<float> centroid_vector_norms_L2sqr(nsubc);
+        if (isNew) {
             nn_centroid_idxs[centroid_idx].resize(nsubc);
-            nn_centroid_norms_L2sqr[centroid_idx].resize(nsubc);
+            subgroup_sizes[centroid_idx].resize(nsubc);
+            memset(subgroup_sizes[centroid_idx].data(), 0, nsubc * sizeof(idx_t));
+
+            std::priority_queue<std::pair<float, idx_t>> nn_centroids_raw = quantizer->searchKnn(centroid, nsubc + 1);
             while (nn_centroids_raw.size() > 1) {
                 nn_centroid_norms_L2sqr[centroid_idx][nn_centroids_raw.size() - 2] = nn_centroids_raw.top().first;
                 nn_centroid_idxs[centroid_idx][nn_centroids_raw.size() - 2]        = nn_centroids_raw.top().second;
-
                 nn_centroids_raw.pop();
             }
         }
@@ -113,14 +112,14 @@ namespace ivfhnsw
         // Compute centroid-neighbor_centroid and centroid-group_point vectors
         std::vector<float> centroid_vectors(nsubc * d);
         for (size_t subc = 0; subc < nsubc; subc++) {
-            const float *neighbor_centroid = quantizer->getDataByInternalId(nn_centroids[subc]);
+            const float* neighbor_centroid = quantizer->getDataByInternalId(nn_centroids[subc]);
             faiss::fvec_madd(d, neighbor_centroid, -1., centroid, centroid_vectors.data() + subc * d);
         }
 
         // Compute alpha for group vectors
-        // FIXIT, fatal bug in multiple add batch mode
-        alphas[centroid_idx] = compute_alpha(centroid_vectors.data(), data, centroid,
-                                             centroid_vector_norms, group_size);
+        if (isNew) {
+            alphas[centroid_idx] = compute_alpha(centroid_vectors.data(), data, centroid, centroid_vector_norms, group_size);
+        }
 
         // Compute final subcentroids
         std::vector<float> subcentroids(nsubc * d);
@@ -139,7 +138,7 @@ namespace ivfhnsw
         compute_residuals(group_size, data, residuals.data(), subcentroids.data(), subcentroid_idxs.data());
 
         // Rotate residuals
-        if (do_opq){
+        if (do_opq) {
             std::vector<float> copy_residuals(group_size * d);
             memcpy(copy_residuals.data(), residuals.data(), group_size * d * sizeof(float));
             opq_matrix->apply_noalloc(group_size, copy_residuals.data(), residuals.data());
@@ -154,7 +153,7 @@ namespace ivfhnsw
         pq->decode(xcodes.data(), decoded_residuals.data(), group_size);
 
         // Reverse rotation
-        if (do_opq){
+        if (do_opq) {
             std::vector<float> copy_decoded_residuals(group_size * d);
             memcpy(copy_decoded_residuals.data(), decoded_residuals.data(), group_size * d * sizeof(float));
             opq_matrix->transform_transpose(group_size, copy_decoded_residuals.data(), decoded_residuals.data());
@@ -162,8 +161,7 @@ namespace ivfhnsw
 
         // Reconstruct data
         std::vector<float> reconstructed_x(group_size * d);
-        reconstruct(group_size, reconstructed_x.data(), decoded_residuals.data(),
-                    subcentroids.data(), subcentroid_idxs.data());
+        reconstruct(group_size, reconstructed_x.data(), decoded_residuals.data(), subcentroids.data(), subcentroid_idxs.data());
 
         // Compute norms
         std::vector<float> norms(group_size);
@@ -174,9 +172,9 @@ namespace ivfhnsw
         norm_pq->compute_codes(norms.data(), xnorm_codes.data(), group_size);
 
         // Distribute codes
-        std::vector<std::vector<idx_t> > construction_ids(nsubc);
-        std::vector<std::vector<uint8_t> > construction_codes(nsubc);
-        std::vector<std::vector<uint8_t> > construction_norm_codes(nsubc);
+        std::vector<std::vector<idx_t>>   construction_ids(nsubc);
+        std::vector<std::vector<uint8_t>> construction_codes(nsubc);
+        std::vector<std::vector<uint8_t>> construction_norm_codes(nsubc);
         for (size_t i = 0; i < group_size; i++) {
             idx_t idx = idxs[i];
             idx_t subcentroid_idx = subcentroid_idxs[i];
@@ -186,12 +184,16 @@ namespace ivfhnsw
             for (size_t j = 0; j < code_size; j++)
                 construction_codes[subcentroid_idx].push_back(xcodes[i * code_size + j]);
         }
+
         // Add codes to the index
         for (size_t subc = 0; subc < nsubc; subc++) {
             idx_t subgroup_size = construction_norm_codes[subc].size();
-            subgroup_sizes[centroid_idx].push_back(subgroup_size);
+            subgroup_sizes[centroid_idx][subc] += subgroup_size;
 
             for (size_t i = 0; i < subgroup_size; i++) {
+                // sub group number, which vector belongs to
+                // we will use it to change sub group size when delete vector
+                subc_idx[centroid_idx].push_back(subc);
                 ids[centroid_idx].push_back(construction_ids[subc][i]);
                 for (size_t j = 0; j < code_size; j++)
                     codes[centroid_idx].push_back(construction_codes[subc][i * code_size + j]);
@@ -204,7 +206,7 @@ namespace ivfhnsw
                                            const float *data, const idx_t *idxs)
     {
         bool isNew = (norm_codes[centroid_idx].size() == 0) ? true : false;
-        // Find NN centroids to source centroid 
+        // Find NN centroids to source centroid
         const float *centroid = quantizer->getDataByInternalId(centroid_idx);
         std::priority_queue<std::pair<float, idx_t>> nn_centroids_raw = quantizer->searchKnn(centroid, nsubc + 1);
 
@@ -216,12 +218,6 @@ namespace ivfhnsw
             centroid_vector_norms_L2sqr[nn_centroids_raw.size() - 2] = nn_centroids_raw.top().first;
             if(isNew) {
                 nn_centroid_idxs[centroid_idx][nn_centroids_raw.size() - 2] = nn_centroids_raw.top().second;
-            }
-
-            if (fp_centriod) {
-                // if centriod info trace enabled, log it
-                fprintf(fp_centriod, "centroid index:\t%u\tsub centroid distance:\t%f\n",
-                        centroid_idx, centroid_vector_norms_L2sqr[nn_centroids_raw.size() - 2]);
             }
 
             nn_centroids_raw.pop();
@@ -315,7 +311,7 @@ namespace ivfhnsw
         // Add codes to the index
         for (size_t subc = 0; subc < nsubc; subc++) {
             idx_t subgroup_size = construction_norm_codes[subc].size();
-            if(isNew) {
+            if (isNew) {
                 subgroup_sizes[centroid_idx].push_back(subgroup_size);
             } else {
                 subgroup_sizes[centroid_idx][subc] += subgroup_size;
@@ -589,6 +585,56 @@ namespace ivfhnsw
         return rc;
     }
 
+   int IndexIVF_HNSW_Grouping::delete_vid_v2(const float *x, idx_t vid)
+    {
+        int rc = -1;
+        idx_t centroid_idxs[nprobe]; // Indices of the nearest coarse centroids
+
+        // For correct search using OPQ rotate a query
+        const float *query = (do_opq) ? opq_matrix->apply(1, x) : x;
+
+        // Find the nearest coarse centroids to the query
+        auto coarse = quantizer->searchKnn(query, nprobe);
+        for (int_fast32_t i = nprobe - 1; i >= 0; i--) {
+            idx_t centroid_idx = coarse.top().second;
+            centroid_idxs[i] = centroid_idx;
+
+            coarse.pop();
+        }
+
+        for (size_t i = 0; i < nprobe; i++) {
+            const idx_t  centroid_idx = centroid_idxs[i];
+            const size_t group_size   = norm_codes[centroid_idx].size();
+
+            if (group_size == 0)
+                continue;
+
+            for (int x = 0; x < ids[centroid_idx].size(); x++) {
+                if (ids[centroid_idx][x] == vid) {
+                    std::cout << "[delete_vid]find ids[" << centroid_idx << "][" << x << "]=" << ids[centroid_idx][x] << std::endl;
+
+                    // decrease sub group vector count
+                    subgroup_sizes[centroid_idx][subc_idx[centroid_idx][x]]--;
+
+                    // remove
+                    std::swap(ids[centroid_idx][x], ids[centroid_idx].back());
+                    ids[centroid_idx].pop_back();
+
+                    std::swap(norm_codes[centroid_idx][x], norm_codes[centroid_idx].back());
+                    norm_codes[centroid_idx].pop_back();
+
+                    for (size_t j = (code_size - 1); j >= 0; j++) {
+                        std::swap(codes[centroid_idx][x * code_size + j], norm_codes[centroid_idx].back());
+                        codes[centroid_idx].pop_back();
+                    }
+                    rc = 0;
+                    return rc;
+                }
+            }
+        }
+        return rc;
+    }
+
     void IndexIVF_HNSW_Grouping::searchDisk(size_t k, const float *query, float *distances,
                                             long *labels, const char *path_base)
     {
@@ -797,7 +843,7 @@ namespace ivfhnsw
         return rc;
     }
 
-    int IndexIVF_HNSW_Grouping::search(size_t k, const uint8_t* query, std::vector<size_t>& id_vectors) {
+    int IndexIVF_HNSW_Grouping::search(size_t k, const uint8_t *query, std::vector<size_t>& id_vectors) {
         float query_f[d];
 
         for (int i = 0; i < d; i++) {
@@ -807,7 +853,7 @@ namespace ivfhnsw
         return search(k, query_f, id_vectors);
     }
 
-    int IndexIVF_HNSW_Grouping::search(size_t k, const float* query, std::vector<size_t>& id_vectors) {
+    int IndexIVF_HNSW_Grouping::search(size_t k, const float *query, std::vector<size_t>& id_vectors) {
         float distances_base[k];
         long  labels_base[k];
 

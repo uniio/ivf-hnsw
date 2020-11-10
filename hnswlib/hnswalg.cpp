@@ -303,7 +303,7 @@ void HierarchicalNSW::LoadData(const std::string &location)
     for (size_t i = 0; i < maxelements_; i++) {
         input.read((char *) &dim, sizeof(uint32_t));
         if (dim != d_) {
-            std::cout << "Wront data dim" << std::endl;
+            std::cout << "Wrong data dim" << std::endl;
             exit(1);
         }
         input.read((char *) mass, dim * sizeof(float));

@@ -1558,7 +1558,6 @@ out:
 
         do_opq = pq_conf.with_opq;
 
-        // TODO: mocify following function, force core dump when failed to build quantizer
         try {
             rc = build_quantizer(path_centroids, path_info, path_edges, pq_conf.M, pq_conf.efConstruction);
         } catch (...) {

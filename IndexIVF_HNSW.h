@@ -69,9 +69,6 @@ namespace ivfhnsw {
         std::vector<std::vector<uint8_t> > norm_codes;  ///< PQ codes of norms of reconstructed base vectors
         std::vector<std::vector<uint8_t> > subc_idx;           ///< trace sub group info for every index
 
-        // information associated with hdr.vec file
-        orcvhdr_t hdr_idx;
-
         std::vector<float> &get_centroid_norms() { return centroid_norms; }
 
         // used for profile algorithm, trace centroids info in search
@@ -87,9 +84,6 @@ namespace ivfhnsw {
         // Min number of edges per point
         size_t M;
 
-        // match search and nearly search parameter
-        float dmatch = 4444.0;
-        float dnear = 8888.0;
     public:
         explicit IndexIVF_HNSW(size_t dim, size_t ncentroids, size_t bytes_per_code,
                                size_t nbits_per_idx, size_t max_group_size = 65536);

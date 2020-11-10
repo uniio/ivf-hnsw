@@ -166,9 +166,6 @@ namespace ivfhnsw {
         /// Write index to the path_index
         virtual int write(const char *path_index);
 
-        // write ORCV format index files
-        virtual int write2(const char *home_dir, size_t n_vecs, bool do_opq, const char *path_edge);
-
         /// Read index from the path
         virtual int read(const char *path);
 

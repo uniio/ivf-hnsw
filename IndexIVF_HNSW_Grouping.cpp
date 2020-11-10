@@ -615,6 +615,24 @@ namespace ivfhnsw
 
                     // decrease sub group vector count
                     subgroup_sizes[centroid_idx][subc_idx[centroid_idx][x]]--;
+#ifdef TEST_OLD_INDEX
+                    int subc_vector_no = 0;
+                    int subc_idx_no = 0;
+                    for(int y = 0; y < nsubc; y++) {
+                        subc_vector_no += subgroup_sizes[centroid_idx][y];
+                        std::cout << "[delete_vid_v2] subc_vector_no=[" << subc_vector_no
+                                  << "] subgroup_sizes[" << centroid_idx << "][" << y << "]="
+                                  << subgroup_sizes[centroid_idx][y]<< std::endl;
+                        if(subc_vector_no >= (x+1)) {
+                            subc_idx_no = y;
+                            std::cout << "[delete_vid_v2] find"
+                                      << " subgroup_sizes[" << centroid_idx << "][" << y << "]="
+                                      << subgroup_sizes[centroid_idx][y]<< std::endl;
+                            break;
+                        }
+                    }
+                    subgroup_sizes[centroid_idx][subc_idx_no]--;
+#endif
 
                     // remove
                     std::swap(ids[centroid_idx][x], ids[centroid_idx].back());
@@ -623,8 +641,8 @@ namespace ivfhnsw
                     std::swap(norm_codes[centroid_idx][x], norm_codes[centroid_idx].back());
                     norm_codes[centroid_idx].pop_back();
 
-                    for (size_t j = (code_size - 1); j >= 0; j++) {
-                        std::swap(codes[centroid_idx][x * code_size + j], norm_codes[centroid_idx].back());
+                    for (int j = (code_size - 1); j >= 0; j--) {
+                        std::swap(codes[centroid_idx][x * code_size + j], codes[centroid_idx].back());
                         codes[centroid_idx].pop_back();
                     }
                     rc = 0;

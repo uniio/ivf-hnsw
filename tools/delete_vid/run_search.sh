@@ -63,7 +63,6 @@ path_model="/home/hzz/ssd/orcv_search/models"
 path_base="${path_data}/split_1000/132/bigann_base_000.bvecs"
 path_learn="${path_data}/bigann_learn.bvecs"
 path_gt="/"
-path_q="${path_data}/split_1000/132/bigann_base_001.bvecs"
 path_centroids="${path_data}/centroids_sift1b.fvecs"
 
 path_precomputed_idxs="${path_data}/split_1000/precomputed_idxs_000.ivecs"
@@ -75,7 +74,9 @@ path_norm_pq="${path_model}/1/norm_pq${code_size}_nsubc${nsubc}.opq"
 path_opq_matrix="${path_model}/1/matrix_pq${code_size}_nsubc${nsubc}.opq"
 
 #path_index="${path_model}/1/ivfhnsw_PQ${code_size}_nsubc${nsubc}.index"
+
 #path_index="${path_model}/1/ivfhnsw_OPQ16_nsubc64_1.index"
+path_q="${path_data}/split_1000/132/bigann_base_001.bvecs"
 path_index="${path_model}/2/ivfhnsw_OPQ16_nsubc64_2.index"
 
 #######

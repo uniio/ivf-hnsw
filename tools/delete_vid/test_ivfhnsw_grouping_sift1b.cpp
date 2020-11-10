@@ -86,9 +86,9 @@ int main(int argc, char **argv)
     index->quantizer->efSearch = opt.efSearch;
     index->do_pruning = opt.do_pruning;
 
-    //========
-    // Search 
-    //========
+    //=============================
+    // Search  before delete vid
+    //=============================
     size_t correct = 0;
     float distances[opt.k];
     long labels[opt.k];
@@ -108,9 +108,16 @@ int main(int argc, char **argv)
             }
         }
     }
+    //=============================
+    // delete vid
+    //=============================
     idx_t vid = 0 + base_id;
     idx_t batch_pos = vid - base_id;
-    index->delete_vid(massQ.data() + batch_pos*opt.d, vid);
+    //index->delete_vid(massQ.data() + batch_pos*opt.d, vid);
+    index->delete_vid_v2(massQ.data() + batch_pos*opt.d, vid);
+    //=============================
+    // search after delete vid
+    //=============================
     for (size_t i = 0; i < opt.nq; i++) {
         index->search(opt.k, massQ.data() + i*opt.d, distances, labels);
         std::cout << "query vector id: " << i + base_id << std::endl;

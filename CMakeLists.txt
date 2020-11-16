@@ -5,6 +5,13 @@ project(ivf-hnsw C CXX)
 
 include_directories("${PROJECT_BINARY_DIR}")
 
+# add faiss header and lib
+include_directories("${PROJECT_SOURCE_DIR}/faisslib/")
+link_directories("${PROJECT_SOURCE_DIR}/faisslib/lib")
+
+# add ivf-hnsw header
+include_directories("${PROJECT_SOURCE_DIR}/../")
+
 add_subdirectory(hnswlib)
 
 # specify output bin_path and lib_path

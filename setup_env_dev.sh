@@ -32,4 +32,11 @@ fi
 eval $RUN_SUDO ln -s ${PWD}/faisslib/${CURRENT_FASISS}/header ${PWD}/faisslib/faiss
 eval $RUN_SUDO ln -s ${PWD}/faisslib/${CURRENT_FASISS}/lib ${PWD}/faisslib/lib
 
+if [ -L ${PWD}/hnswalg.h ] ; then
+    eval $RUN_SUDO rm ${PWD}/hnswalg.h
+    eval $RUN_SUDO ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
+else
+    eval $RUN_SUDO ln -s ${PWD}/hnswlib/hnswalg.h ${PWD}/hnswalg.h
+fi
+
 echo "success setup develop environment"

@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
     //=====================================
     // Force reconstruct index for debug
     {
-        rc = index->add_one_batch_to_index_v2("/mnt/hdd_strip/orcv_search/data/split_1000/bigann_base_000.bvecs", "/root/src/ivf-hnsw/precomputed_idxs_000.ivecs", 0);
+        int rc = index->add_one_batch_to_index_v2("/mnt/hdd_strip/orcv_search/data/split_1000/bigann_base_000.bvecs", "/root/src/ivf-hnsw/precomputed_idxs_000.ivecs", 0);
         if (rc) {
             std::cout << "Failed to access file: "
                       << "/mnt/hdd_strip/orcv_search/data/split_1000/bigann_base_000.bvecs" << std::endl;

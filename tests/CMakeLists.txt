@@ -6,7 +6,12 @@ file(GLOB srcs ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 # Build each source file independently
 include_directories(../../)	# ivf-hnsw root directory
+include_directories(../)	# hnswlib root directory
 LINK_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../lib/)
+
+# add faiss header and lib
+include_directories("${PROJECT_SOURCE_DIR}/../faisslib/")
+link_directories("${PROJECT_SOURCE_DIR}/../faisslib/lib")
 
 SET( CMAKE_CXX_FLAGS  "-O2 -g -lrt -DNDEBUG -std=c++11 -DHAVE_CXX0X -openmp -march=native -fpic -w -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=0" )
 

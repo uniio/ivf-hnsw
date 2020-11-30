@@ -464,6 +464,13 @@ namespace ivfhnsw
             const uint8_t *norm_code = norm_codes[centroid_idx].data();
             const idx_t *id = ids[centroid_idx].data();
 
+resize_norms:
+            if (norm_codes[centroid_idx].size() > norms.size()) {
+                max_points *= 2;
+                norms.resize(max_points);
+                goto resize_norms;
+            }
+
 #ifdef TRACE_NEIGHBOUR
             log_trace << "centroid " << centroid_idx << " with threshold: " << threshold;
             log_trace << " get neighbours distance:\n";

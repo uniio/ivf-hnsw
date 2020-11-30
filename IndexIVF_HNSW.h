@@ -63,6 +63,7 @@ namespace ivfhnsw {
 
         size_t nprobe;        ///< Number of probes at search time
         size_t max_codes;     ///< Max number of codes to visit to do a query
+        size_t max_points;    ///< Max number of points in a centroids allowed
 
         std::vector<std::vector<idx_t> > ids;           ///< Inverted lists for indexes
         std::vector<std::vector<uint8_t> > codes;       ///< PQ codes of residuals

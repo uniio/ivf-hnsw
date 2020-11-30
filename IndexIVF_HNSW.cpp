@@ -17,6 +17,7 @@ namespace ivfhnsw {
         norm_pq = new faiss::ProductQuantizer(1, 1, nbits_per_idx);
 
         code_size = pq->code_size;
+        max_points = max_group_size;
         norms.resize(max_group_size); // buffer for reconstructed base point norms. It is used at search time.
         precomputed_table.resize(pq->ksub * pq->M);
 
@@ -268,6 +269,12 @@ namespace ivfhnsw {
             const size_t group_size = norm_codes[centroid_idx].size();
             if (group_size == 0)
                 continue;
+resize_norms:
+            if (norm_codes[centroid_idx].size() > norms.size()) {
+                max_points *= 2;
+                norms.resize(max_points);
+                goto resize_norms;
+            }
 
             const uint8_t *code = codes[centroid_idx].data();
             const uint8_t *norm_code = norm_codes[centroid_idx].data();

@@ -69,7 +69,7 @@ struct Parser
         if (argc == 1)
             usage();
 
-        for (size_t i = 1 ; i < argc; i++) {
+        for (int i = 1 ; i < argc; i++) {
             char *a = argv[i];
 
             if (!strcmp (a, "-h") || !strcmp (a, "--help"))

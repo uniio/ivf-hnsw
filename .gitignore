@@ -1,3 +1,4 @@
+*.o
 *.make
 bin
 CMakeFiles
@@ -9,9 +10,13 @@ CMakeCache.txt
 main
 *.swp
 *.log
+hnswalg.h
 build_index
 search_index
 build_precomputed_index
 build_precomputed_index_ex
+faisslib/faiss
+faisslib/lib
+lib
 
 

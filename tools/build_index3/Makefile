@@ -1,17 +1,25 @@
+TARGET = build_index
+OBJS = $(TARGET).o
 CC = g++
 CFLAGS = -ggdb3 -Wall -std=c++11
-SET_OBJ_DIR = -o
-LIBS =  -lfaiss -fopenmp -lopenblas -lpq
+LFLAGS = -livf-hnsw -lhnswlib -lfaiss -fopenmp -lopenblas -lpq
+INCS = -I../../../ -I../../ -I../../faisslib/
+LIBS = -L../../lib -L../../faisslib/lib
 
-all : build_index
+$(TARGET) : $(OBJS)
+	$(CC) -o $@ $^ $(INCS) $(LIBS) $(CFLAGS) $(LFLAGS)
+$(OBJS) : %.o : %.cpp
+	$(CC) $(CFLAGS) $(INCS) -c $< -o $@
 
-.PHONY : all
+%.d:%.cpp
+	@set -e; rm -f $@; $(CC) -MM $< $(INCS) > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
 
-build_index : build_index.cpp
-	$(CC) build_index.cpp $(CFLAGS) $(LIBS) $(SET_OBJ_DIR) build_index
+-include $(OBJS:.o=.d)
 
 .PHONY:clean
 clean:
-	rm -rf *.o  build_index core*
+	rm -rf *.o $(TARGET) $(TARGET).d* core*
 	@echo "Clean done!"
 

@@ -31,3 +31,12 @@ target_link_libraries(ivf-hnsw faiss hnswlib pq)
 
 # build tests
 # add_subdirectory(tests)
+
+set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
+INSTALL(DIRECTORY lib DESTINATION IVF_Release)
+INSTALL(FILES faisslib/lib/libfaiss.a DESTINATION IVF_Release/lib)
+INSTALL(DIRECTORY faisslib/faiss_release_o2/header/ DESTINATION IVF_Release/faiss)
+INSTALL(DIRECTORY hnswlib DESTINATION IVF_Release FILES_MATCHING PATTERN "*.h" PATTERN "CMakeFiles" EXCLUDE)
+INSTALL(FILES ${ivf-hnsw_cpu_headers} DESTINATION IVF_Release/ivf-hnsw)
+
+# add_custom_target (create_tar ALL COMMAND ${CMAKE_COMMAND} -E tar "cvf" "ivf.zip" --format=zip IVF_Release)

@@ -2266,23 +2266,33 @@ out:
         int rc;
         StopW stopw = StopW();
 
-        std::cout << "ADD queue to index with vector number of " << vec_size << std::endl;
+        std::cout << "Add queue to index with vector number of " << vec_size << std::endl;
+
+        std::vector<std::vector<float>> data(nc);
+        std::vector<std::vector<idx_t>> ids(nc);
+
+        for (size_t i = 0; i < vec_size; i++) {
+            idx_t idx = idx_batch[i];
+            for (size_t j = 0; j < d; j++)
+                data[idx].push_back(batch[i * d + j]);
+            ids[idx].push_back(vid[i]);
+        }
 
         size_t j = 0;
 #pragma omp parallel for
-        for (size_t i = 0; i < vec_size; i++) {
+        for (size_t i = 0; i < nc; i++) {
 #pragma omp critical
             {
-                //if (j % 10000 == 0)
-                {
+                if (j % 10000 == 0) {
                     std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
-                        << (100. * j) / vec_size << "%" << std::endl;
+                        << (100. * j) / nc << "%" << std::endl;
                 }
                 j++;
             }
-            std::vector<float> data(batch + (i * d), batch + (i * d) + (d - 1));
-            std::vector<idx_t> ids{vid[i]};
-            add_group(idx_batch[i], 1, data.data(), ids.data());
+            const size_t group_size = ids[i].size();
+            if(group_size == 0)
+                continue;
+            add_group(i, group_size, data[i].data(), ids[i].data());
         }
 
         return 0;

@@ -2259,6 +2259,68 @@ out:
         return 0;
     }
 
+    int IndexIVF_HNSW_Grouping::add_queue_to_index_ex(const float* batch,
+                                                      const idx_t* idx_batch,
+                                                      const size_t* vid,
+                                                      size_t vec_size) {
+        int rc;
+        size_t groups_per_iter = 250000;
+        uint32_t batch_size = vec_size;
+
+        StopW stopw = StopW();
+
+        // fix behavior when total vector record number in file smaller than groups_per_iter
+        // TODO? too small in here, for the next circulation with nc = 993713
+        groups_per_iter = vec_size;
+
+        std::cout << "Batch queue with vector number of " << vec_size << std::endl;
+        std::cout << "Build index in one iteration with groups count " << groups_per_iter << std::endl;
+
+        for (size_t ngroups_added = 0; ngroups_added < nc; ngroups_added += groups_per_iter)
+        {
+            std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                      << ngroups_added << " / " << nc << std::endl;
+
+            std::vector<std::vector<float>> data(groups_per_iter);
+            std::vector<std::vector<idx_t>> ids(groups_per_iter);
+
+            for (size_t i = 0; i < batch_size; i++) {
+                if (idx_batch[i] < ngroups_added ||
+                        idx_batch[i] >= ngroups_added + groups_per_iter)
+                    continue;
+
+                idx_t idx = idx_batch[i] % groups_per_iter;
+                for (size_t j = 0; j < d; j++)
+                    data[idx].push_back(batch[i * d + j]);
+                ids[idx].push_back(vid[i]);
+            }
+
+            /*
+             * If <opt.nc> is not a multiple of groups_per_iter,
+             * change <groups_per_iter> on the last iteration
+             */
+            if (nc - ngroups_added <= groups_per_iter)
+                groups_per_iter = nc - ngroups_added;
+
+            size_t j = 0;
+            #pragma omp parallel for
+            for (size_t i = 0; i < groups_per_iter; i++) {
+                #pragma omp critical
+                {
+                    if (j % 10000 == 0) {
+                        std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+                                  << (100. * (ngroups_added + j)) / nc << "%" << std::endl;
+                    }
+                    j++;
+                }
+                const size_t group_size = ids[i].size();
+                add_group(ngroups_added + i, group_size, data[i].data(), ids[i].data());
+            }
+        }
+
+        return 0;
+    }
+
     void IndexIVF_HNSW_Grouping::get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char* path_index)
     {
         sprintf(path_index, "%s/%lu/ivfhnsw_OPQ%lu_nsubc%lu_%lu.index",

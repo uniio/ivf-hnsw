@@ -244,6 +244,7 @@ namespace ivfhnsw {
         int add_one_batch_to_index_ex(const system_conf_t& sys_conf, size_t batch_idx, bool final_add);
         int add_one_batch_to_index_ex(const char* path_vector, const char* path_precomputed_idx, size_t base_id);
         int add_one_batch_to_index_ex(const system_conf_t &sys_conf, size_t batch_idx);
+        int add_queue_to_index_ex(const float* batch, const idx_t* idx_batch, const size_t* vid, size_t vec_size);
 
         void get_path_index(const system_conf_t &sys_conf, const size_t idx_ver, char *path_index);
         int save_index(const system_conf_t &sys_conf, const size_t idx_ver);

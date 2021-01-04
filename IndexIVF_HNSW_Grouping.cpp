@@ -483,7 +483,7 @@ resize_norms:
                     continue;
 
                 // Check pruning condition
-                if (!do_pruning || qsd[subc] < threshold) {
+                if (!do_pruning || qsd[subc] <= threshold) {
                     const idx_t nn_centroid_idx = nn_centroid_idxs[centroid_idx][subc];
 
                     // Compute the distance to the coarse centroid if it is not computed
@@ -919,6 +919,28 @@ resize_norms:
         }
 
         return 0;
+    }
+
+    void IndexIVF_HNSW_Grouping::trans_search(size_t k, const float *query, std::vector<size_t>& id_vectors) {
+        float distances_base[k];
+        long  labels_base[k];
+
+        search(k, query, distances_base, labels_base);
+#ifdef TRANS_SEARCH_DEBUG
+        std::cout << "[ivf-search] Original search result lables is ";
+        for(int i = 0; i < k; i++) {
+            std::cout << labels_base[i] << ", ";
+        }
+        std::cout << "" << std::endl;
+#endif
+
+        for (int di = k - 1; di >= 0; di--) {
+            if (labels_base[di] == -1) {
+                continue;
+            }
+            id_vectors.push_back(labels_base[di]);
+        }
+        return;
     }
 
     int IndexIVF_HNSW_Grouping::prepare_db()
@@ -2294,6 +2316,8 @@ out:
                 continue;
             add_group(i, group_size, data[i].data(), ids[i].data());
         }
+        std::cout << "[" << stopw.getElapsedTimeMicro() / 1000000 << "s] "
+            << (100. * 1) << "%" << std::endl;
 
         return 0;
     }

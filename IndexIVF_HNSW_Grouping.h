@@ -66,6 +66,7 @@ namespace ivfhnsw {
 
         int search(size_t k, const float* query, std::vector<size_t> &id_vectors);
         int search(size_t k, const uint8_t* query, std::vector<size_t>& id_vectors);
+        void trans_search(size_t k, const float *query, std::vector<size_t>& id_vectors);
 
         int delete_vid(const float *x, idx_t vid);
 

@@ -303,6 +303,33 @@ int Index_DB::GetLatestIndexInfo(size_t &ver, size_t &batch_start, size_t &batch
     return 0;
 }
 
+int Index_DB::GetLatestIndexInfo(size_t &ver, size_t &trans_id, size_t &batch_start, size_t &batch_end) {
+    PGresult *res = PQexec(conn, "SELECT * FROM index_info ORDER BY ver DESC LIMIT 1");
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        cout << "Failed to retrieve data from index_info table" << endl;
+        PQclear(res);
+        return -1;
+    }
+
+    int rows = PQntuples(res);
+    /*
+     * No records in index_info table, it means there have no index yet
+     * service can not provide query service
+     */
+    if (rows == 0) {
+        ver = 0;
+        return 0;
+    } else {
+        ver = atoi(PQgetvalue(res, 0, PQfnumber(res, "ver")));
+        trans_id = atoi(PQgetvalue(res, 0, PQfnumber(res, "trans_id")));
+        batch_start = atoi(PQgetvalue(res, 0, PQfnumber(res, "batch_start")));
+        batch_end = atoi(PQgetvalue(res, 0, PQfnumber(res, "batch_end")));
+    }
+    PQclear(res);
+
+    return 0;
+}
+
 int Index_DB::AppendPQInfo(size_t ver, bool with_opq, size_t nsubc) {
     int rc = -1;
     PGresult *res;

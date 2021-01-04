@@ -38,11 +38,13 @@ CREATE TABLE IF NOT EXISTS batch_info (
 
 /*
   ver           version of index
+  trans_id      last vector id for this index, may be out of range one day
   batch_start   start of batch to build index
   batch_end     end of batch to build index
 */
 CREATE TABLE IF NOT EXISTS index_info (
     ver INTEGER NOT NULL,
+    trans_id INTEGER NOT NULL,
     batch_start INTEGER NOT NULL,
     batch_end INTEGER NOT NULL
 );

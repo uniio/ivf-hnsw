@@ -86,6 +86,7 @@ class Index_DB {
 
     int AppendIndexInfo(size_t idx_ver, size_t batch_start, size_t batch_end);
     int GetLatestIndexInfo(size_t &ver, size_t &batch_start, size_t &batch_end);
+    int GetLatestIndexInfo(size_t &ver, size_t &trans_id, size_t &batch_start, size_t &batch_end);
 
     int SetSysConfig(system_conf_t &sys_conf);
     int GetSysConfig(system_conf_t &sys_conf);
